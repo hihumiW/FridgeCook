@@ -2,8 +2,10 @@ import { createBrowserRouter } from "react-router-dom";
 
 import { AppLayout } from "@/components/layout/AppLayout";
 import { HomePage } from "@/pages/HomePage";
-
-const EmptyRoute = () => null;
+import { IngredientsPage } from "@/pages/IngredientsPage";
+import { RecipeDetailPage } from "@/pages/RecipeDetailPage";
+import { ResultsPage } from "@/pages/ResultsPage";
+import { SeasoningsPage } from "@/pages/SeasoningsPage";
 
 export const router = createBrowserRouter([
   {
@@ -11,10 +13,10 @@ export const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { index: true, element: <HomePage /> },
-      { path: "ingredients", element: <EmptyRoute /> },
-      { path: "seasonings", element: <EmptyRoute /> },
-      { path: "results", element: <EmptyRoute /> },
-      { path: "recipe/:id", element: <EmptyRoute /> },
+      { path: "ingredients", element: <IngredientsPage /> },
+      { path: "seasonings", element: <SeasoningsPage /> },
+      { path: "results", element: <ResultsPage /> },
+      { path: "recipe/:id", element: <RecipeDetailPage /> },
     ],
   },
 ]);

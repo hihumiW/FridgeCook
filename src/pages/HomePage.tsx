@@ -1,4 +1,5 @@
 import { Grip, RotateCcw } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import { ingredients, seasonings } from "@/data";
 import { DeviceFrame } from "@/components/home/DeviceFrame";
@@ -40,17 +41,21 @@ export function HomePage() {
       </header>
 
       <div className="mt-7 space-y-3.5">
-        <SummaryCard title="本次食材" subtitle="已选 4 种">
-          {ingredientPreview.map((item) => (
-            <EmojiPreview emoji={item.emoji ?? ""} key={item.id} label={item.name} />
-          ))}
-        </SummaryCard>
+        <Link aria-label="进入本次食材选择页" className="block" to="/ingredients">
+          <SummaryCard title="本次食材" subtitle="已选 4 种">
+            {ingredientPreview.map((item) => (
+              <EmojiPreview emoji={item.emoji ?? ""} key={item.id} label={item.name} />
+            ))}
+          </SummaryCard>
+        </Link>
 
-        <SummaryCard title="我的调料库" subtitle="已保存 12 种">
-          {seasoningPreview.map((item) => (
-            <EmojiPreview emoji={item.emoji ?? ""} key={item.id} label={item.name} />
-          ))}
-        </SummaryCard>
+        <Link aria-label="进入调料库管理页" className="block" to="/seasonings">
+          <SummaryCard title="我的调料库" subtitle="已保存 12 种">
+            {seasoningPreview.map((item) => (
+              <EmojiPreview emoji={item.emoji ?? ""} key={item.id} label={item.name} />
+            ))}
+          </SummaryCard>
+        </Link>
 
         <PeopleStepperMock />
       </div>
@@ -85,12 +90,12 @@ export function HomePage() {
       </div>
 
       <footer className="mt-5 space-y-3">
-        <button
-          className="h-[52px] w-full rounded-[18px] bg-[#111] text-[16px] font-bold text-white shadow-[0_12px_24px_rgba(0,0,0,0.18)]"
-          type="button"
+        <Link
+          className="flex h-[52px] w-full items-center justify-center rounded-[18px] bg-[#111] text-[16px] font-bold text-white shadow-[0_12px_24px_rgba(0,0,0,0.18)]"
+          to="/results"
         >
           用这些凑一顿
-        </button>
+        </Link>
         <p className="text-center text-[12px] font-semibold text-[#aaa39a]">没思路？先选点食材再说吧～</p>
       </footer>
     </DeviceFrame>
