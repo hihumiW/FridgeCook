@@ -17,7 +17,7 @@ export function SummaryCard({ title, subtitle, children }: SummaryCardProps) {
         </div>
         <ChevronRight className="mt-1 h-4 w-4 text-[#1f1d19]" strokeWidth={2.4} />
       </div>
-      <div className="mt-3 flex items-center gap-4">{children}</div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">{children}</div>
     </article>
   );
 }

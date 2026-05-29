@@ -1,24 +1,103 @@
+import { useMemo, useState } from "react";
+
 import { ingredients } from "@/data";
 import { AppTopBar } from "@/components/common/AppTopBar";
 import { DeviceFrame } from "@/components/home/DeviceFrame";
 import { CategoryPill } from "@/components/ingredients/CategoryPill";
+import { CustomIngredientButton } from "@/components/ingredients/CustomIngredientButton";
 import { IngredientSearchBox } from "@/components/ingredients/IngredientSearchBox";
 import { IngredientTile } from "@/components/ingredients/IngredientTile";
 import { SelectedIngredientsBar } from "@/components/ingredients/SelectedIngredientsBar";
+import {
+  matchesKeyword,
+  normalizeSearchKeyword,
+  uniqueSearchResultsById,
+} from "@/lib/search";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { useCookingStore } from "@/stores/useCookingStore";
+import type { IngredientCategory } from "@/types";
 
-const selectedIngredientIds = ["tomato", "egg", "tofu", "bacon"];
-const categoryLabels = ["常用", "蔬菜", "肉蛋奶", "豆制品", "主食", "速冻"];
-const recentItems = ["西兰花", "玉米", "胡萝卜", "鸡腿", "金针菇"];
+type IngredientCategoryFilter = "common" | IngredientCategory;
 
-function isSelected(id: string) {
-  return selectedIngredientIds.includes(id);
+const categoryFilters: { label: string; value: IngredientCategoryFilter }[] = [
+  { label: "常用", value: "common" },
+  { label: "蔬菜", value: "vegetable" },
+  { label: "肉蛋奶", value: "meat_egg_dairy" },
+  { label: "豆制品", value: "soy" },
+  { label: "主食", value: "staple" },
+  { label: "速冻", value: "frozen" },
+];
+
+function normalizeForCompare(name: string) {
+  return name.trim();
 }
 
 export function IngredientsPage() {
-  const commonIngredients = ingredients.filter((item) => item.isCommon).slice(0, 15);
-  const selectedNames = selectedIngredientIds
-    .map((id) => ingredients.find((item) => item.id === id)?.name)
-    .filter((name): name is string => Boolean(name));
+  const {
+    selectedIngredients,
+    recentIngredients,
+    customIngredients,
+    toggleIngredient,
+    addCustomIngredient,
+  } = useCookingStore();
+  const [isAddingCustom, setIsAddingCustom] = useState(false);
+  const [customName, setCustomName] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState<IngredientCategoryFilter>("common");
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, 220);
+  const activeCategoryLabel =
+    categoryFilters.find((category) => category.value === activeCategory)?.label ?? "常用";
+  const categoryIngredients = ingredients
+    .filter((item) =>
+      activeCategory === "common"
+        ? item.isCommon
+        : item.category === activeCategory,
+    )
+    .slice(0, activeCategory === "common" ? 15 : undefined);
+  const selectedIds = new Set(selectedIngredients.map((item) => item.id));
+  const selectedNames = selectedIngredients
+    .filter((item) => item.name?.trim())
+    .map((item) => item.name);
+  const normalizedCustomName = normalizeForCompare(customName);
+  const allIngredients = useMemo(
+    () => [
+      ...ingredients,
+      ...customIngredients,
+      ...recentIngredients,
+      ...selectedIngredients,
+    ],
+    [customIngredients, recentIngredients, selectedIngredients],
+  );
+  const isDuplicateCustomName =
+    normalizedCustomName.length > 0 &&
+    allIngredients.some(
+      (ingredient) =>
+        normalizeForCompare(ingredient.name) === normalizedCustomName ||
+        ingredient.aliases?.some((alias) => normalizeForCompare(alias) === normalizedCustomName),
+    );
+  const canConfirmCustom = normalizedCustomName.length > 0 && !isDuplicateCustomName;
+  const normalizedSearchQuery = normalizeSearchKeyword(debouncedSearchQuery);
+  const isSearching = normalizedSearchQuery.length > 0;
+  const searchResults = useMemo(
+    () =>
+      uniqueSearchResultsById([
+        ...ingredients,
+        ...customIngredients,
+        ...recentIngredients,
+      ]).filter((item) => matchesKeyword(item, normalizedSearchQuery)),
+    [customIngredients, normalizedSearchQuery, recentIngredients],
+  );
+
+  function closeCustomDialog() {
+    setIsAddingCustom(false);
+    setCustomName("");
+  }
+
+  function handleConfirmCustom() {
+    if (!canConfirmCustom) return;
+    addCustomIngredient(normalizedCustomName);
+    closeCustomDialog();
+  }
 
   return (
     <DeviceFrame>
@@ -30,45 +109,171 @@ export function IngredientsPage() {
       </header>
 
       <div className="mt-5">
-        <IngredientSearchBox />
+        <IngredientSearchBox value={searchQuery} onChange={setSearchQuery} />
       </div>
 
-      <nav className="mt-5 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {categoryLabels.map((label, index) => (
-          <CategoryPill active={index === 0} key={label} label={label} />
-        ))}
-      </nav>
-
-      <section className="mt-4 space-y-3">
-        <h2 className="px-1 text-[14px] font-extrabold text-[#1b1a17]">常用食材</h2>
-        <div className="grid grid-cols-3 gap-2.5">
-          {commonIngredients.map((item) => (
-            <IngredientTile
-              emoji={item.emoji}
-              key={item.id}
-              name={item.name}
-              selected={isSelected(item.id)}
+      {!isSearching ? (
+        <nav className="mt-5 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {categoryFilters.map((category) => (
+            <CategoryPill
+              active={activeCategory === category.value}
+              key={category.value}
+              label={category.label}
+              onClick={() => setActiveCategory(category.value)}
             />
           ))}
-        </div>
-      </section>
+        </nav>
+      ) : null}
 
-      <section className="mb-24 mt-7 space-y-3">
-        <h2 className="px-1 text-[14px] font-extrabold text-[#1b1a17]">最近使用</h2>
-        <div className="flex flex-wrap gap-2.5">
-          {recentItems.map((item) => (
-            <button
-              className="h-8 rounded-full border border-[#ebe6dd] bg-white px-3.5 text-[12px] font-semibold text-[#5f594f] shadow-sm"
-              key={item}
-              type="button"
-            >
-              {item}
-            </button>
-          ))}
-        </div>
-      </section>
+      {isSearching ? (
+        <section className="mt-5 space-y-3">
+          <h2 className="px-1 text-[14px] font-extrabold text-[#1b1a17]">搜索结果</h2>
+          {searchResults.length > 0 ? (
+            <div className="grid grid-cols-3 gap-2.5">
+              {searchResults.map((item) => (
+                <IngredientTile
+                  emoji={item.emoji}
+                  key={item.id}
+                  name={item.name}
+                  onClick={() => toggleIngredient(item)}
+                  selected={selectedIds.has(item.id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-[16px] border border-[#eee9e2] bg-white px-4 py-5 text-center">
+              <p className="text-[13px] font-bold text-[#4f4a43]">没找到这个食材</p>
+              <p className="mt-1 text-[12px] font-semibold text-[#aaa39a]">
+                可以把它加进你的自定义食材里。
+              </p>
+              <div className="mt-4 flex justify-center">
+                <CustomIngredientButton onClick={() => setIsAddingCustom(true)}>
+                  添加自定义食材
+                </CustomIngredientButton>
+              </div>
+            </div>
+          )}
+        </section>
+      ) : (
+        <>
+          <section className="mt-4 space-y-3">
+            <h2 className="px-1 text-[14px] font-extrabold text-[#1b1a17]">
+              {activeCategoryLabel}食材
+            </h2>
+            {categoryIngredients.length > 0 ? (
+              <div className="grid grid-cols-3 gap-2.5">
+                {categoryIngredients.map((item) => (
+                  <IngredientTile
+                    emoji={item.emoji}
+                    key={item.id}
+                    name={item.name}
+                    onClick={() => toggleIngredient(item)}
+                    selected={selectedIds.has(item.id)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-[16px] border border-[#eee9e2] bg-white px-4 py-5 text-center">
+                <p className="text-[13px] font-bold text-[#4f4a43]">这个分类还没有食材</p>
+              </div>
+            )}
+          </section>
+
+          <section className="mt-7 space-y-3">
+            <h2 className="px-1 text-[14px] font-extrabold text-[#1b1a17]">自定义食材</h2>
+            <div className="flex flex-wrap gap-2.5">
+              <CustomIngredientButton onClick={() => setIsAddingCustom(true)}>
+                添加自定义食材
+              </CustomIngredientButton>
+            </div>
+            {customIngredients.length > 0 ? (
+              <div className="grid grid-cols-3 gap-2.5">
+                {customIngredients.map((item) => (
+                  <IngredientTile
+                    emoji={item.emoji}
+                    key={item.id}
+                    name={item.name}
+                    onClick={() => toggleIngredient(item)}
+                    selected={selectedIds.has(item.id)}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </section>
+
+          {recentIngredients.length > 0 ? (
+            <section className="mb-24 mt-7 space-y-3">
+              <h2 className="px-1 text-[14px] font-extrabold text-[#1b1a17]">最近使用</h2>
+              <div className="flex flex-wrap gap-2.5">
+                {recentIngredients.map((item) => (
+                  <button
+                    className={`h-8 rounded-full border px-3.5 text-[12px] font-semibold shadow-sm ${
+                      selectedIds.has(item.id)
+                        ? "border-[#84c77d] bg-[#f7fff5] text-[#4d9547]"
+                        : "border-[#ebe6dd] bg-white text-[#5f594f]"
+                    }`}
+                    key={item.id}
+                    onClick={() => toggleIngredient(item)}
+                    type="button"
+                  >
+                    {item.name}
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : (
+            <div className="mb-24" />
+          )}
+        </>
+      )}
 
       <SelectedIngredientsBar names={selectedNames} />
+
+      {isAddingCustom ? (
+        <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/20 px-4 pb-[calc(18px+env(safe-area-inset-bottom))] sm:items-center sm:pb-0">
+          <section className="w-full max-w-[398px] rounded-[22px] border border-[#eeeae4] bg-[#fbfaf8] p-4 shadow-[0_18px_48px_rgba(22,20,18,0.18)]">
+            <h2 className="text-[17px] font-black text-[#151411]">添加自定义食材</h2>
+            <p className="mt-1 text-[12px] font-semibold text-[#9b958d]">
+              输入这次想用、但列表里没有的食材。
+            </p>
+
+            <input
+              autoFocus
+              className="mt-4 h-11 w-full rounded-[14px] border border-[#ebe6dd] bg-white px-3 text-[14px] font-semibold text-[#2f2b26] outline-none placeholder:text-[#bbb4aa] focus:border-[#8dcf87]"
+              maxLength={20}
+              onChange={(event) => setCustomName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") handleConfirmCustom();
+                if (event.key === "Escape") closeCustomDialog();
+              }}
+              placeholder="比如：牛肉"
+              value={customName}
+            />
+
+            <div className="mt-2 min-h-5 text-[12px] font-semibold text-[#d65d4d]">
+              {isDuplicateCustomName ? "这个食材已经存在了" : ""}
+            </div>
+
+            <div className="mt-3 flex gap-2">
+              <button
+                className="h-11 flex-1 rounded-[14px] bg-[#f1eee8] text-[14px] font-bold text-[#5f594f]"
+                onClick={closeCustomDialog}
+                type="button"
+              >
+                取消
+              </button>
+              <button
+                className="h-11 flex-1 rounded-[14px] bg-[#111] text-[14px] font-bold text-white disabled:cursor-not-allowed disabled:bg-[#c8c1b8]"
+                disabled={!canConfirmCustom}
+                onClick={handleConfirmCustom}
+                type="button"
+              >
+                确认添加
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </DeviceFrame>
   );
 }

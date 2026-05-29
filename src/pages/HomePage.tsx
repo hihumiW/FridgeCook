@@ -1,28 +1,64 @@
 import { Grip, RotateCcw } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { ingredients, seasonings } from "@/data";
 import { DeviceFrame } from "@/components/home/DeviceFrame";
-import { EmojiPreview } from "@/components/home/EmojiPreview";
 import { EnergyCard } from "@/components/home/EnergyCard";
 import { HomeIconButton } from "@/components/home/HomeIconButton";
 import { PeopleStepperMock } from "@/components/home/PeopleStepperMock";
 import { PreferenceChip } from "@/components/home/PreferenceChip";
 import { PromptBoxMock } from "@/components/home/PromptBoxMock";
 import { SummaryCard } from "@/components/home/SummaryCard";
+import { SummaryItemPreview } from "@/components/home/SummaryItemPreview";
+import { useCookingStore } from "@/stores/useCookingStore";
+import type { EnergyLevel, TastePreference } from "@/types";
 
-const selectedIngredients = ["tomato", "egg", "tofu", "bacon"];
-const savedSeasonings = ["oil", "soy_sauce", "garlic", "dried_chili", "sesame_oil"];
+const energyOptions: {
+  value: EnergyLevel;
+  icon: string;
+  title: string;
+  subtitle: string;
+}[] = [
+  { value: "quick_5min", icon: "⚡", title: "快饿死了", subtitle: "5 分钟糊弄" },
+  { value: "normal_15min", icon: "😊", title: "还有口气", subtitle: "15 分钟正常做" },
+  { value: "full_energy", icon: "⭐", title: "精力充沛", subtitle: "折腾一下" },
+];
 
-function pickEmoji(ids: string[], source: { id: string; name: string; emoji?: string }[]) {
-  return ids
-    .map((id) => source.find((item) => item.id === id))
-    .filter((item): item is { id: string; name: string; emoji?: string } => Boolean(item?.emoji));
-}
+const tasteOptions: TastePreference[] = [
+  "清淡",
+  "辣一点",
+  "不能吃辣",
+  "重口味",
+  "热乎汤菜",
+  "下饭菜",
+  "少油",
+  "不挑，能吃就行",
+];
 
 export function HomePage() {
-  const ingredientPreview = pickEmoji(selectedIngredients, ingredients);
-  const seasoningPreview = pickEmoji(savedSeasonings, seasonings);
+  const {
+    selectedIngredients,
+    seasoningLibrary,
+    preferences,
+    userPrompt,
+    setPeopleCount,
+    setEnergyLevel,
+    toggleTastePreference,
+    setUserPrompt,
+    rememberSelectedIngredients,
+    buildGenerateRecipeRequest,
+  } = useCookingStore();
+
+  const validSelectedIngredients = selectedIngredients.filter((item) => item.name?.trim());
+  const validSelectedSeasonings = seasoningLibrary.selectedSeasonings.filter((item) =>
+    item.name?.trim(),
+  );
+  const ingredientPreview = validSelectedIngredients.slice(0, 5);
+  const seasoningPreview = validSelectedSeasonings.slice(0, 5);
+
+  function handleGenerate() {
+    buildGenerateRecipeRequest();
+    rememberSelectedIngredients();
+  }
 
   return (
     <DeviceFrame>
@@ -36,67 +72,106 @@ export function HomePage() {
       </div>
 
       <header className="mt-7 px-1">
-        <h1 className="text-[28px] font-black leading-9 tracking-normal text-[#151411]">今晚吃什么？</h1>
-        <p className="mt-2 text-[13px] font-semibold text-[#969188]">点几下，看看这些东西能不能凑一顿。</p>
+        <h1 className="text-[28px] font-black leading-9 tracking-normal text-[#151411]">
+          今晚吃什么？
+        </h1>
+        <p className="mt-2 text-[13px] font-semibold text-[#969188]">
+          点几下，看看这些东西能不能凑一顿。
+        </p>
       </header>
 
       <div className="mt-7 space-y-3.5">
-        <Link aria-label="进入本次食材选择页" className="block" to="/ingredients">
-          <SummaryCard title="本次食材" subtitle="已选 4 种">
-            {ingredientPreview.map((item) => (
-              <EmojiPreview emoji={item.emoji ?? ""} key={item.id} label={item.name} />
-            ))}
+        <Link
+          aria-label="进入本次食材选择页"
+          className="block"
+          to="/ingredients"
+        >
+          <SummaryCard title="本次食材" subtitle={`已选 ${validSelectedIngredients.length} 种`}>
+            {ingredientPreview.length > 0 ? (
+              ingredientPreview.map((item) => (
+                <SummaryItemPreview emoji={item.emoji} key={item.id} name={item.name} />
+              ))
+            ) : (
+              <span className="text-[12px] font-semibold text-[#aaa39a]">还没选食材</span>
+            )}
           </SummaryCard>
         </Link>
 
         <Link aria-label="进入调料库管理页" className="block" to="/seasonings">
-          <SummaryCard title="我的调料库" subtitle="已保存 12 种">
-            {seasoningPreview.map((item) => (
-              <EmojiPreview emoji={item.emoji ?? ""} key={item.id} label={item.name} />
-            ))}
+          <SummaryCard
+            title="我的调料库"
+            subtitle={`已保存 ${validSelectedSeasonings.length} 种`}
+          >
+            {seasoningPreview.length > 0 ? (
+              seasoningPreview.map((item) => (
+                <SummaryItemPreview emoji={item.emoji} key={item.id} name={item.name} />
+              ))
+            ) : (
+              <span className="text-[12px] font-semibold text-[#aaa39a]">还没设置调料</span>
+            )}
           </SummaryCard>
         </Link>
 
-        <PeopleStepperMock />
+        <PeopleStepperMock value={preferences.peopleCount} onChange={setPeopleCount} />
       </div>
 
       <section className="mt-6 space-y-3">
-        <h2 className="px-1 text-[15px] font-extrabold text-[#1b1a17]">你的精力状态</h2>
+        <h2 className="px-1 text-[15px] font-extrabold text-[#1b1a17]">
+          你的精力状态
+        </h2>
         <div className="grid grid-cols-3 gap-3">
-          <EnergyCard icon="⚡" subtitle="5 分钟糊弄" title="快饿死了" />
-          <EnergyCard icon="😊" selected subtitle="15 分钟正常做" title="还有口气" />
-          <EnergyCard icon="⭐" subtitle="折腾一下" title="精力充沛" />
+          {energyOptions.map((option) => (
+            <EnergyCard
+              icon={option.icon}
+              key={option.value}
+              onClick={() => setEnergyLevel(option.value)}
+              selected={preferences.energyLevel === option.value}
+              subtitle={option.subtitle}
+              title={option.title}
+            />
+          ))}
         </div>
       </section>
 
       <section className="mt-7 space-y-3">
         <h2 className="px-1 text-[15px] font-extrabold text-[#1b1a17]">
           口味偏好
-          <span className="ml-2 text-[12px] font-bold text-[#9d968d]">（可多选）</span>
+          <span className="ml-2 text-[12px] font-bold text-[#9d968d]">
+            （可多选）
+          </span>
         </h2>
         <div className="flex flex-wrap gap-2.5">
-          <PreferenceChip>清淡</PreferenceChip>
-          <PreferenceChip badge="1">🌶️ 辣一点</PreferenceChip>
-          <PreferenceChip>重口味</PreferenceChip>
-          <PreferenceChip>热乎汤菜</PreferenceChip>
-          <PreferenceChip>下饭菜</PreferenceChip>
-          <PreferenceChip>少油</PreferenceChip>
-          <PreferenceChip selected>🥕 不挑，能吃就行</PreferenceChip>
+          {tasteOptions.map((option) => (
+            <PreferenceChip
+              key={option}
+              onClick={() => toggleTastePreference(option)}
+              selected={preferences.tastePreferences.includes(option)}
+            >
+              {option === "辣一点"
+                ? "🌶️ 辣一点"
+                : option === "不挑，能吃就行"
+                  ? "🥕 不挑，能吃就行"
+                  : option}
+            </PreferenceChip>
+          ))}
         </div>
       </section>
 
       <div className="mt-7">
-        <PromptBoxMock />
+        <PromptBoxMock value={userPrompt} onChange={setUserPrompt} />
       </div>
 
       <footer className="mt-5 space-y-3">
         <Link
           className="flex h-[52px] w-full items-center justify-center rounded-[18px] bg-[#111] text-[16px] font-bold text-white shadow-[0_12px_24px_rgba(0,0,0,0.18)]"
+          onClick={handleGenerate}
           to="/results"
         >
           用这些凑一顿
         </Link>
-        <p className="text-center text-[12px] font-semibold text-[#aaa39a]">没思路？先选点食材再说吧～</p>
+        <p className="text-center text-[12px] font-semibold text-[#aaa39a]">
+          没思路？先选点食材再说吧～
+        </p>
       </footer>
     </DeviceFrame>
   );

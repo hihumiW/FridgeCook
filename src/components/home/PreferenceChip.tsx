@@ -2,9 +2,10 @@ type PreferenceChipProps = {
   children: string;
   selected?: boolean;
   badge?: string;
+  onClick?: () => void;
 };
 
-export function PreferenceChip({ children, selected, badge }: PreferenceChipProps) {
+export function PreferenceChip({ children, selected, badge, onClick }: PreferenceChipProps) {
   return (
     <button
       className={`relative h-8 rounded-full border px-4 text-[12px] font-semibold shadow-sm ${
@@ -12,6 +13,7 @@ export function PreferenceChip({ children, selected, badge }: PreferenceChipProp
           ? "border-[#84c77d] bg-[#f7fff5] text-[#4d9547]"
           : "border-[#ece7df] bg-white text-[#58534c]"
       }`}
+      onClick={onClick}
       type="button"
     >
       {children}
