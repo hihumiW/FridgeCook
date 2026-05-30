@@ -10,7 +10,7 @@ export function PromptBoxMock({ value, onChange }: PromptBoxMockProps) {
         还有什么特别要求？
         <span className="ml-2 text-[12px] font-bold text-[#9d968d]">（选填）</span>
       </h2>
-      <div className="min-h-[74px] rounded-[17px] border border-[#ece7df] bg-white px-4 py-3 shadow-[0_7px_22px_rgba(27,24,20,0.055)]">
+      <div className="min-h-[74px] rounded-[17px] border border-[#ece7df] bg-white px-4 py-3 shadow-[0_7px_22px_rgba(27,24,20,0.055)] transition-[border-color,box-shadow] focus-within:border-[#8dcf87] focus-within:shadow-[0_10px_26px_rgba(91,157,85,0.14)] focus-within:ring-2 focus-within:ring-[#dff2dc]">
         <textarea
           className="min-h-[42px] w-full resize-none bg-transparent text-[12px] font-medium leading-6 text-[#4f4942] outline-none placeholder:text-[#b8b2a9]"
           maxLength={200}

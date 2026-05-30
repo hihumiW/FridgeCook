@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
 import { seasonings } from "@/data";
@@ -12,6 +13,12 @@ import {
   uniqueSearchResultsById,
 } from "@/lib/search";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import {
+  fadeItem,
+  modalBackdropVariants,
+  modalPanelVariants,
+  motionTapProps,
+} from "@/lib/motion";
 import { useCookingStore } from "@/stores/useCookingStore";
 import type { SeasoningCategory } from "@/types";
 
@@ -90,7 +97,12 @@ export function SeasoningsPage() {
 
       <div className="mt-6 space-y-7">
         {isSearching ? (
-          <section className="space-y-3">
+          <motion.section
+            animate="animate"
+            className="space-y-3"
+            initial="initial"
+            variants={fadeItem}
+          >
             <h2 className="px-1 text-[14px] font-extrabold text-[#1b1a17]">搜索结果</h2>
             {searchResults.length > 0 ? (
               <div className="flex flex-wrap gap-2.5">
@@ -117,7 +129,7 @@ export function SeasoningsPage() {
                 </div>
               </div>
             )}
-          </section>
+          </motion.section>
         ) : (
           categorySections.map((section) => {
             const items = seasonings.filter((item) => item.category === section.category);
@@ -165,9 +177,19 @@ export function SeasoningsPage() {
         ) : null}
       </div>
 
-      {isAddingCustom ? (
-        <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/20 px-4 pb-[calc(18px+env(safe-area-inset-bottom))] sm:items-center sm:pb-0">
-          <section className="w-full max-w-[398px] rounded-[22px] border border-[#eeeae4] bg-[#fbfaf8] p-4 shadow-[0_18px_48px_rgba(22,20,18,0.18)]">
+      <AnimatePresence>
+        {isAddingCustom ? (
+        <motion.div
+          animate="animate"
+          className="fixed inset-0 z-30 flex items-end justify-center bg-black/20 px-4 pb-[calc(18px+env(safe-area-inset-bottom))] sm:items-center sm:pb-0"
+          exit="exit"
+          initial="initial"
+          variants={modalBackdropVariants}
+        >
+          <motion.section
+            className="w-full max-w-[398px] rounded-[22px] border border-[#eeeae4] bg-[#fbfaf8] p-4 shadow-[0_18px_48px_rgba(22,20,18,0.18)]"
+            variants={modalPanelVariants}
+          >
             <h2 className="text-[17px] font-black text-[#151411]">添加自定义调料</h2>
             <p className="mt-1 text-[12px] font-semibold text-[#9b958d]">
               输入你家里常备但列表里没有的调料。
@@ -175,7 +197,7 @@ export function SeasoningsPage() {
 
             <input
               autoFocus
-              className="mt-4 h-11 w-full rounded-[14px] border border-[#ebe6dd] bg-white px-3 text-[14px] font-semibold text-[#2f2b26] outline-none placeholder:text-[#bbb4aa] focus:border-[#8dcf87]"
+              className="mt-4 h-11 w-full rounded-[14px] border border-[#ebe6dd] bg-white px-3 text-[14px] font-semibold text-[#2f2b26] outline-none placeholder:text-[#bbb4aa] transition-[border-color,box-shadow] focus:border-[#8dcf87] focus:shadow-[0_9px_22px_rgba(91,157,85,0.12)] focus:ring-2 focus:ring-[#dff2dc]"
               maxLength={20}
               onChange={(event) => setCustomName(event.target.value)}
               onKeyDown={(event) => {
@@ -191,25 +213,28 @@ export function SeasoningsPage() {
             </div>
 
             <div className="mt-3 flex gap-2">
-              <button
+              <motion.button
                 className="h-11 flex-1 rounded-[14px] bg-[#f1eee8] text-[14px] font-bold text-[#5f594f]"
                 onClick={closeCustomDialog}
                 type="button"
+                {...motionTapProps}
               >
                 取消
-              </button>
-              <button
+              </motion.button>
+              <motion.button
                 className="h-11 flex-1 rounded-[14px] bg-[#111] text-[14px] font-bold text-white disabled:cursor-not-allowed disabled:bg-[#c8c1b8]"
                 disabled={!canConfirmCustom}
                 onClick={handleConfirmCustom}
                 type="button"
+                {...motionTapProps}
               >
                 确认添加
-              </button>
+              </motion.button>
             </div>
-          </section>
-        </div>
-      ) : null}
+          </motion.section>
+        </motion.div>
+        ) : null}
+      </AnimatePresence>
     </DeviceFrame>
   );
 }

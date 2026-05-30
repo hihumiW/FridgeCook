@@ -1,3 +1,7 @@
+import { motion } from "framer-motion";
+
+import { chipMotionProps, selectedPop } from "@/lib/motion";
+
 type PreferenceChipProps = {
   children: string;
   selected?: boolean;
@@ -7,14 +11,16 @@ type PreferenceChipProps = {
 
 export function PreferenceChip({ children, selected, badge, onClick }: PreferenceChipProps) {
   return (
-    <button
-      className={`relative h-8 rounded-full border px-4 text-[12px] font-semibold shadow-sm ${
+    <motion.button
+      animate={selected ? selectedPop : { scale: 1 }}
+      className={`relative h-8 rounded-full border px-4 text-[12px] font-semibold shadow-sm transition-colors ${
         selected
           ? "border-[#84c77d] bg-[#f7fff5] text-[#4d9547]"
           : "border-[#ece7df] bg-white text-[#58534c]"
       }`}
       onClick={onClick}
       type="button"
+      {...chipMotionProps}
     >
       {children}
       {badge ? (
@@ -22,6 +28,6 @@ export function PreferenceChip({ children, selected, badge, onClick }: Preferenc
           {badge}
         </span>
       ) : null}
-    </button>
+    </motion.button>
   );
 }

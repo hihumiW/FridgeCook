@@ -1,4 +1,7 @@
+import { motion } from "framer-motion";
 import { Check } from "lucide-react";
+
+import { cardMotionProps, selectedPop } from "@/lib/motion";
 
 type IngredientTileProps = {
   emoji?: string;
@@ -14,14 +17,16 @@ export function IngredientTile({
   onClick,
 }: IngredientTileProps) {
   return (
-    <button
-      className={`relative flex h-[72px] flex-col items-center justify-center gap-1 rounded-[11px] border text-center shadow-[0_7px_20px_rgba(27,24,20,0.055)] ${
+    <motion.button
+      animate={selected ? selectedPop : { scale: 1 }}
+      className={`relative flex h-[72px] flex-col items-center justify-center gap-1 rounded-[11px] border text-center shadow-[0_7px_20px_rgba(27,24,20,0.055)] transition-colors ${
         selected
           ? "border-[#d7e8ce] bg-[#fbfff8] text-[#35312c]"
           : "border-[#ece7df] bg-white text-[#5f594f]"
       }`}
       onClick={onClick}
       type="button"
+      {...cardMotionProps}
     >
       {selected ? (
         <span className="absolute right-2 top-2 flex h-[15px] w-[15px] items-center justify-center rounded-full bg-[#111] text-white">
@@ -34,6 +39,6 @@ export function IngredientTile({
         </span>
       ) : null}
       <span className="text-[11px] font-semibold text-[#4f4a43]">{name}</span>
-    </button>
+    </motion.button>
   );
 }

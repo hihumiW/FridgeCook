@@ -1,7 +1,10 @@
+import { motion } from "framer-motion";
+
 import { recipeMockups } from "@/data";
 import { AppTopBar } from "@/components/common/AppTopBar";
 import { DeviceFrame } from "@/components/home/DeviceFrame";
 import { RecipeResultCard } from "@/components/results/RecipeResultCard";
+import { motionTapProps, staggerContainer, staggerItem } from "@/lib/motion";
 
 export function ResultsPage() {
   return (
@@ -17,19 +20,27 @@ export function ResultsPage() {
         </p>
       </header>
 
-      <section className="mt-5 space-y-3.5">
+      <motion.section
+        animate="animate"
+        className="mt-5 space-y-3.5"
+        initial="initial"
+        variants={staggerContainer}
+      >
         {recipeMockups.map((recipe) => (
-          <RecipeResultCard key={recipe.id} {...recipe} />
+          <motion.div key={recipe.id} variants={staggerItem}>
+            <RecipeResultCard {...recipe} />
+          </motion.div>
         ))}
-      </section>
+      </motion.section>
 
       <footer className="mt-5 space-y-3 pb-2">
-        <button
-          className="h-[52px] w-full rounded-[18px] bg-[#111] text-[16px] font-bold text-white shadow-[0_12px_24px_rgba(0,0,0,0.18)]"
+        <motion.button
+          className="h-[52px] w-full rounded-[18px] bg-[#111] text-[16px] font-bold text-white shadow-[0_12px_24px_rgba(0,0,0,0.18)] transition-shadow hover:shadow-[0_14px_28px_rgba(0,0,0,0.22)]"
           type="button"
+          {...motionTapProps}
         >
           换一批菜谱
-        </button>
+        </motion.button>
         <p className="text-center text-[12px] font-semibold text-[#aaa39a]">
           不满意？换一批试试～
         </p>

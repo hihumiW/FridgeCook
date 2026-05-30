@@ -1,4 +1,7 @@
+import { motion } from "framer-motion";
 import { Check } from "lucide-react";
+
+import { chipMotionProps, selectedPop } from "@/lib/motion";
 
 type SeasoningChipProps = {
   emoji?: string;
@@ -9,14 +12,16 @@ type SeasoningChipProps = {
 
 export function SeasoningChip({ emoji, name, selected, onClick }: SeasoningChipProps) {
   return (
-    <button
-      className={`relative inline-flex h-9 items-center gap-1.5 rounded-[11px] border px-3.5 text-[12px] font-semibold shadow-sm ${
+    <motion.button
+      animate={selected ? selectedPop : { scale: 1 }}
+      className={`relative inline-flex h-9 items-center gap-1.5 rounded-[11px] border px-3.5 text-[12px] font-semibold shadow-sm transition-colors ${
         selected
           ? "border-[#d7e8ce] bg-[#fbfff8] text-[#35312c]"
           : "border-[#ece7df] bg-white text-[#5f594f]"
       }`}
       onClick={onClick}
       type="button"
+      {...chipMotionProps}
     >
       {emoji ? <span className="text-[15px]">{emoji}</span> : null}
       <span>{name}</span>
@@ -25,6 +30,6 @@ export function SeasoningChip({ emoji, name, selected, onClick }: SeasoningChipP
           <Check className="h-[10px] w-[10px]" strokeWidth={3} />
         </span>
       ) : null}
-    </button>
+    </motion.button>
   );
 }

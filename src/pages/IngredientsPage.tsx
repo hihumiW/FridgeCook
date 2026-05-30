@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
 import { ingredients } from "@/data";
@@ -14,6 +15,13 @@ import {
   uniqueSearchResultsById,
 } from "@/lib/search";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import {
+  chipMotionProps,
+  fadeItem,
+  modalBackdropVariants,
+  modalPanelVariants,
+  motionTapProps,
+} from "@/lib/motion";
 import { useCookingStore } from "@/stores/useCookingStore";
 import type { IngredientCategory } from "@/types";
 
@@ -126,7 +134,12 @@ export function IngredientsPage() {
       ) : null}
 
       {isSearching ? (
-        <section className="mt-5 space-y-3">
+        <motion.section
+          animate="animate"
+          className="mt-5 space-y-3"
+          initial="initial"
+          variants={fadeItem}
+        >
           <h2 className="px-1 text-[14px] font-extrabold text-[#1b1a17]">搜索结果</h2>
           {searchResults.length > 0 ? (
             <div className="grid grid-cols-3 gap-2.5">
@@ -153,7 +166,7 @@ export function IngredientsPage() {
               </div>
             </div>
           )}
-        </section>
+        </motion.section>
       ) : (
         <>
           <section className="mt-4 space-y-3">
@@ -206,8 +219,8 @@ export function IngredientsPage() {
               <h2 className="px-1 text-[14px] font-extrabold text-[#1b1a17]">最近使用</h2>
               <div className="flex flex-wrap gap-2.5">
                 {recentIngredients.map((item) => (
-                  <button
-                    className={`h-8 rounded-full border px-3.5 text-[12px] font-semibold shadow-sm ${
+                  <motion.button
+                    className={`h-8 rounded-full border px-3.5 text-[12px] font-semibold shadow-sm transition-colors ${
                       selectedIds.has(item.id)
                         ? "border-[#84c77d] bg-[#f7fff5] text-[#4d9547]"
                         : "border-[#ebe6dd] bg-white text-[#5f594f]"
@@ -215,9 +228,10 @@ export function IngredientsPage() {
                     key={item.id}
                     onClick={() => toggleIngredient(item)}
                     type="button"
+                    {...chipMotionProps}
                   >
                     {item.name}
-                  </button>
+                  </motion.button>
                 ))}
               </div>
             </section>
@@ -229,9 +243,19 @@ export function IngredientsPage() {
 
       <SelectedIngredientsBar names={selectedNames} />
 
-      {isAddingCustom ? (
-        <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/20 px-4 pb-[calc(18px+env(safe-area-inset-bottom))] sm:items-center sm:pb-0">
-          <section className="w-full max-w-[398px] rounded-[22px] border border-[#eeeae4] bg-[#fbfaf8] p-4 shadow-[0_18px_48px_rgba(22,20,18,0.18)]">
+      <AnimatePresence>
+        {isAddingCustom ? (
+        <motion.div
+          animate="animate"
+          className="fixed inset-0 z-30 flex items-end justify-center bg-black/20 px-4 pb-[calc(18px+env(safe-area-inset-bottom))] sm:items-center sm:pb-0"
+          exit="exit"
+          initial="initial"
+          variants={modalBackdropVariants}
+        >
+          <motion.section
+            className="w-full max-w-[398px] rounded-[22px] border border-[#eeeae4] bg-[#fbfaf8] p-4 shadow-[0_18px_48px_rgba(22,20,18,0.18)]"
+            variants={modalPanelVariants}
+          >
             <h2 className="text-[17px] font-black text-[#151411]">添加自定义食材</h2>
             <p className="mt-1 text-[12px] font-semibold text-[#9b958d]">
               输入这次想用、但列表里没有的食材。
@@ -239,7 +263,7 @@ export function IngredientsPage() {
 
             <input
               autoFocus
-              className="mt-4 h-11 w-full rounded-[14px] border border-[#ebe6dd] bg-white px-3 text-[14px] font-semibold text-[#2f2b26] outline-none placeholder:text-[#bbb4aa] focus:border-[#8dcf87]"
+              className="mt-4 h-11 w-full rounded-[14px] border border-[#ebe6dd] bg-white px-3 text-[14px] font-semibold text-[#2f2b26] outline-none placeholder:text-[#bbb4aa] transition-[border-color,box-shadow] focus:border-[#8dcf87] focus:shadow-[0_9px_22px_rgba(91,157,85,0.12)] focus:ring-2 focus:ring-[#dff2dc]"
               maxLength={20}
               onChange={(event) => setCustomName(event.target.value)}
               onKeyDown={(event) => {
@@ -255,25 +279,28 @@ export function IngredientsPage() {
             </div>
 
             <div className="mt-3 flex gap-2">
-              <button
+              <motion.button
                 className="h-11 flex-1 rounded-[14px] bg-[#f1eee8] text-[14px] font-bold text-[#5f594f]"
                 onClick={closeCustomDialog}
                 type="button"
+                {...motionTapProps}
               >
                 取消
-              </button>
-              <button
+              </motion.button>
+              <motion.button
                 className="h-11 flex-1 rounded-[14px] bg-[#111] text-[14px] font-bold text-white disabled:cursor-not-allowed disabled:bg-[#c8c1b8]"
                 disabled={!canConfirmCustom}
                 onClick={handleConfirmCustom}
                 type="button"
+                {...motionTapProps}
               >
                 确认添加
-              </button>
+              </motion.button>
             </div>
-          </section>
-        </div>
-      ) : null}
+          </motion.section>
+        </motion.div>
+        ) : null}
+      </AnimatePresence>
     </DeviceFrame>
   );
 }

@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { Link, useParams } from "react-router-dom";
 
 import { recipeMockups } from "@/data";
@@ -5,6 +6,9 @@ import { AppTopBar } from "@/components/common/AppTopBar";
 import { DeviceFrame } from "@/components/home/DeviceFrame";
 import { RecipeHero } from "@/components/recipe/RecipeHero";
 import { RecipeStep } from "@/components/recipe/RecipeStep";
+import { motionTapProps } from "@/lib/motion";
+
+const MotionLink = motion.create(Link);
 
 export function RecipeDetailPage() {
   const { id } = useParams();
@@ -50,12 +54,13 @@ export function RecipeDetailPage() {
       </section>
 
       <footer className="mt-6 pb-2">
-        <Link
-          className="flex h-[52px] w-full items-center justify-center rounded-[18px] bg-[#111] text-[16px] font-bold text-white shadow-[0_12px_24px_rgba(0,0,0,0.18)]"
+        <MotionLink
+          className="flex h-[52px] w-full items-center justify-center rounded-[18px] bg-[#111] text-[16px] font-bold text-white shadow-[0_12px_24px_rgba(0,0,0,0.18)] transition-shadow hover:shadow-[0_14px_28px_rgba(0,0,0,0.22)]"
           to="/results"
+          {...motionTapProps}
         >
           重新生成
-        </Link>
+        </MotionLink>
       </footer>
     </DeviceFrame>
   );
