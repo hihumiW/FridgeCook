@@ -2,11 +2,13 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import { ingredients, seasonings } from "@/data";
+import { appendExtraPrompt, generateRecipesWithLlm } from "@/lib/recipeGeneration";
 import type {
   CookingPreferences,
   EnergyLevel,
   GenerateRecipeRequest,
   Ingredient,
+  LlmConfig,
   RecentIngredient,
   Recipe,
   Seasoning,
@@ -29,6 +31,12 @@ type CookingStore = {
   userPrompt: string;
   /** 当前生成出的菜谱结果；后续接 AI 后使用，不持久化。 */
   generatedRecipes: Recipe[];
+  /** 当前是否正在请求模型生成菜谱。 */
+  isGeneratingRecipes: boolean;
+  /** 最近一次生成菜谱失败的错误信息。 */
+  generateRecipeError: string | null;
+  /** 浏览器直连 LLM 的本地配置；包含 Base URL、API Key 和模型名。 */
+  llmConfig: LlmConfig;
   /** 选中或取消选中一个本次食材。 */
   toggleIngredient: (ingredient: Ingredient) => void;
   /** 清空本次已选食材。 */
@@ -47,6 +55,8 @@ type CookingStore = {
   removeCustomSeasoning: (id: string) => void;
   /** 将调料库恢复为默认调料：盐和食用油。 */
   resetSeasoningsToDefault: () => void;
+  /** 清空已选调料，但保留自定义调料候选。 */
+  clearSelectedSeasonings: () => void;
   /** 设置用餐人数，范围限制在 1 到 12。 */
   setPeopleCount: (count: number) => void;
   /** 设置当前精力值。 */
@@ -59,6 +69,14 @@ type CookingStore = {
   setGeneratedRecipes: (recipes: Recipe[]) => void;
   /** 清空当前菜谱结果。 */
   clearGeneratedRecipes: () => void;
+  /** 根据当前页面状态调用 LLM 生成菜谱。 */
+  generateRecipes: (options?: { extraPrompt?: string }) => Promise<boolean>;
+  /** 清空最近一次生成错误。 */
+  clearGenerateRecipeError: () => void;
+  /** 保存浏览器直连 LLM 的本地配置。 */
+  setLlmConfig: (config: LlmConfig) => void;
+  /** 清空浏览器直连 LLM 的本地配置。 */
+  resetLlmConfig: () => void;
   /** 根据当前页面状态组装生成菜谱请求参数。 */
   buildGenerateRecipeRequest: () => GenerateRecipeRequest;
 };
@@ -69,6 +87,13 @@ const defaultPreferences: CookingPreferences = {
   peopleCount: 1,
   energyLevel: "normal_15min",
   tastePreferences: ["不挑，能吃就行"],
+};
+
+const defaultLlmConfig: LlmConfig = {
+  baseUrl: "",
+  apiKey: "",
+  model: "",
+  temperature: 0.3,
 };
 
 function uniqueById<T extends { id: string }>(items: T[]) {
@@ -150,6 +175,22 @@ function sanitizeSeasoningLibrary(library: SeasoningLibrary): SeasoningLibrary {
   };
 }
 
+function sanitizeLlmConfig(
+  config?: Partial<LlmConfig> & { endpointUrl?: string },
+): LlmConfig {
+  return {
+    baseUrl: config?.baseUrl?.trim() ?? config?.endpointUrl?.trim() ?? "",
+    apiKey: config?.apiKey?.trim() ?? "",
+    model: config?.model?.trim() ?? "",
+    temperature: clampTemperature(config?.temperature),
+  };
+}
+
+function clampTemperature(value?: number) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return 0.3;
+  return Math.max(0.1, Math.min(0.8, Number(value.toFixed(1))));
+}
+
 export const useCookingStore = create<CookingStore>()(
   persist(
     (set, get) => ({
@@ -164,6 +205,9 @@ export const useCookingStore = create<CookingStore>()(
       preferences: defaultPreferences,
       userPrompt: "",
       generatedRecipes: [],
+      isGeneratingRecipes: false,
+      generateRecipeError: null,
+      llmConfig: defaultLlmConfig,
 
       toggleIngredient: (ingredient) =>
         set((state) => {
@@ -300,6 +344,15 @@ export const useCookingStore = create<CookingStore>()(
           },
         })),
 
+      clearSelectedSeasonings: () =>
+        set((state) => ({
+          seasoningLibrary: {
+            ...state.seasoningLibrary,
+            selectedSeasonings: [],
+            updatedAt: new Date().toISOString(),
+          },
+        })),
+
       setPeopleCount: (count) =>
         set((state) => ({
           preferences: {
@@ -349,6 +402,49 @@ export const useCookingStore = create<CookingStore>()(
 
       clearGeneratedRecipes: () => set({ generatedRecipes: [] }),
 
+      clearGenerateRecipeError: () => set({ generateRecipeError: null }),
+
+      generateRecipes: async (options) => {
+        const request = appendExtraPrompt(
+          get().buildGenerateRecipeRequest(),
+          options?.extraPrompt,
+        );
+        const llmConfig = get().llmConfig;
+
+        if (request.ingredients.length === 0) {
+          set({ generateRecipeError: "先选点食材，再让模型凑菜谱。" });
+          return false;
+        }
+
+        if (!llmConfig.baseUrl || !llmConfig.apiKey || !llmConfig.model) {
+          set({ generateRecipeError: "请先完成模型配置。" });
+          return false;
+        }
+
+        set({ generateRecipeError: null, isGeneratingRecipes: true });
+
+        try {
+          const recipes = await generateRecipesWithLlm(request, llmConfig);
+          set({
+            generatedRecipes: recipes,
+            generateRecipeError: null,
+            isGeneratingRecipes: false,
+          });
+          return true;
+        } catch (error) {
+          set({
+            generateRecipeError:
+              error instanceof Error ? error.message : "生成失败，请稍后重试。",
+            isGeneratingRecipes: false,
+          });
+          return false;
+        }
+      },
+
+      setLlmConfig: (llmConfig) => set({ llmConfig: sanitizeLlmConfig(llmConfig) }),
+
+      resetLlmConfig: () => set({ llmConfig: defaultLlmConfig }),
+
       buildGenerateRecipeRequest: () => {
         const state = get();
         return {
@@ -373,6 +469,7 @@ export const useCookingStore = create<CookingStore>()(
         customIngredients: state.customIngredients,
         seasoningLibrary: state.seasoningLibrary,
         preferences: state.preferences,
+        llmConfig: state.llmConfig,
       }),
       merge: (persistedState, currentState) => {
         const persisted = persistedState as Partial<CookingStore> | undefined;
@@ -394,8 +491,11 @@ export const useCookingStore = create<CookingStore>()(
           preferences: persisted?.preferences
             ? { ...currentState.preferences, ...persisted.preferences }
             : currentState.preferences,
+          llmConfig: sanitizeLlmConfig(persisted?.llmConfig ?? currentState.llmConfig),
           userPrompt: "",
           generatedRecipes: [],
+          isGeneratingRecipes: false,
+          generateRecipeError: null,
         };
       },
     },

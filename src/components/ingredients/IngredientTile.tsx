@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 
 import { cardMotionProps, selectedPop } from "@/lib/motion";
 
@@ -8,11 +8,13 @@ type IngredientTileProps = {
   name: string;
   selected?: boolean;
   onClick?: () => void;
+  onDelete?: () => void;
 };
 
 export function IngredientTile({
   emoji,
   name,
+  onDelete,
   selected,
   onClick,
 }: IngredientTileProps) {
@@ -28,6 +30,26 @@ export function IngredientTile({
       type="button"
       {...cardMotionProps}
     >
+      {onDelete ? (
+        <span
+          aria-label={`删除 ${name}`}
+          className="absolute right-2 top-2 z-10 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-[#111] text-white shadow-[0_6px_14px_rgba(0,0,0,0.18)]"
+          onClick={(event) => {
+            event.stopPropagation();
+            onDelete();
+          }}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            event.stopPropagation();
+            onDelete();
+          }}
+        >
+          <X className="h-[11px] w-[11px]" strokeWidth={3} />
+        </span>
+      ) : null}
       {selected ? (
         <span className="absolute right-2 top-2 flex h-[15px] w-[15px] items-center justify-center rounded-full bg-[#111] text-white">
           <Check className="h-[10px] w-[10px]" strokeWidth={3} />

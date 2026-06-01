@@ -38,8 +38,14 @@ export function SeasoningsPage() {
     seasoningLibrary,
     toggleSeasoning,
     addCustomSeasoning,
+    removeCustomSeasoning,
   } = useCookingStore();
   const [isAddingCustom, setIsAddingCustom] = useState(false);
+  const [isManagingCustom, setIsManagingCustom] = useState(false);
+  const [pendingDeleteItem, setPendingDeleteItem] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [customName, setCustomName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebouncedValue(searchQuery, 220);
@@ -78,6 +84,15 @@ export function SeasoningsPage() {
     if (!canConfirmCustom) return;
     addCustomSeasoning(normalizedCustomName);
     closeCustomDialog();
+  }
+
+  function handleConfirmDeleteCustom() {
+    if (!pendingDeleteItem) return;
+    removeCustomSeasoning(pendingDeleteItem.id);
+    if (seasoningLibrary.customSeasonings.length <= 1) {
+      setIsManagingCustom(false);
+    }
+    setPendingDeleteItem(null);
   }
 
   return (
@@ -155,17 +170,38 @@ export function SeasoningsPage() {
 
         {!isSearching ? (
           <section className="space-y-3 pb-8">
-            <h2 className="px-1 text-[14px] font-extrabold text-[#1b1a17]">自定义调料</h2>
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-[14px] font-extrabold text-[#1b1a17]">自定义调料</h2>
+              {seasoningLibrary.customSeasonings.length > 0 ? (
+                <button
+                  className="text-[12px] font-bold text-[#6c665d]"
+                  onClick={() => setIsManagingCustom((current) => !current)}
+                  type="button"
+                >
+                  {isManagingCustom ? "完成" : "管理"}
+                </button>
+              ) : null}
+            </div>
             <div className="flex flex-wrap gap-2.5">
-              <CustomSeasoningButton onClick={() => setIsAddingCustom(true)}>
-                添加自定义调料
-              </CustomSeasoningButton>
+              {(!isManagingCustom || seasoningLibrary.customSeasonings.length === 0) ? (
+                <CustomSeasoningButton onClick={() => setIsAddingCustom(true)}>
+                  添加自定义调料
+                </CustomSeasoningButton>
+              ) : null}
               {seasoningLibrary.customSeasonings.map((item) => (
                 <SeasoningChip
                   emoji={item.emoji}
                   key={item.id}
                   name={item.name}
-                  onClick={() => toggleSeasoning(item)}
+                  onClick={() => {
+                    if (isManagingCustom) return;
+                    toggleSeasoning(item);
+                  }}
+                  onDelete={
+                    isManagingCustom
+                      ? () => setPendingDeleteItem({ id: item.id, name: item.name })
+                      : undefined
+                  }
                   selected={selectedIds.has(item.id)}
                 />
               ))}
@@ -178,6 +214,45 @@ export function SeasoningsPage() {
       </div>
 
       <AnimatePresence>
+        {pendingDeleteItem ? (
+          <motion.div
+            animate="animate"
+            className="fixed inset-0 z-30 flex items-end justify-center bg-black/20 px-4 pb-[calc(18px+env(safe-area-inset-bottom))] sm:items-center sm:pb-0"
+            exit="exit"
+            initial="initial"
+            variants={modalBackdropVariants}
+          >
+            <motion.section
+              className="w-full max-w-[398px] rounded-[22px] border border-[#eeeae4] bg-[#fbfaf8] p-4 shadow-[0_18px_48px_rgba(22,20,18,0.18)]"
+              variants={modalPanelVariants}
+            >
+              <h2 className="text-[17px] font-black text-[#151411]">删除自定义调料？</h2>
+              <p className="mt-2 text-[12px] font-semibold leading-5 text-[#9b958d]">
+                删除自定义调料「{pendingDeleteItem.name}」？删除后也会从已选调料中移除。
+              </p>
+
+              <div className="mt-5 flex gap-2">
+                <motion.button
+                  className="h-11 flex-1 rounded-[14px] bg-[#f1eee8] text-[14px] font-bold text-[#5f594f]"
+                  onClick={() => setPendingDeleteItem(null)}
+                  type="button"
+                  {...motionTapProps}
+                >
+                  取消
+                </motion.button>
+                <motion.button
+                  className="h-11 flex-1 rounded-[14px] bg-[#111] text-[14px] font-bold text-white"
+                  onClick={handleConfirmDeleteCustom}
+                  type="button"
+                  {...motionTapProps}
+                >
+                  确认删除
+                </motion.button>
+              </div>
+            </motion.section>
+          </motion.div>
+        ) : null}
+
         {isAddingCustom ? (
         <motion.div
           animate="animate"

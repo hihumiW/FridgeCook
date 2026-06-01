@@ -16,7 +16,6 @@ import {
 } from "@/lib/search";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import {
-  chipMotionProps,
   fadeItem,
   modalBackdropVariants,
   modalPanelVariants,
@@ -25,15 +24,16 @@ import {
 import { useCookingStore } from "@/stores/useCookingStore";
 import type { IngredientCategory } from "@/types";
 
-type IngredientCategoryFilter = "common" | IngredientCategory;
+type IngredientCategoryFilter = Exclude<IngredientCategory, "common">;
 
 const categoryFilters: { label: string; value: IngredientCategoryFilter }[] = [
-  { label: "常用", value: "common" },
   { label: "蔬菜", value: "vegetable" },
-  { label: "肉蛋奶", value: "meat_egg_dairy" },
+  { label: "肉禽水产", value: "meat_seafood" },
+  { label: "蛋/熟食", value: "egg_processed" },
   { label: "豆制品", value: "soy" },
   { label: "主食", value: "staple" },
   { label: "速冻", value: "frozen" },
+  { label: "其他", value: "other" },
 ];
 
 function normalizeForCompare(name: string) {
@@ -43,25 +43,25 @@ function normalizeForCompare(name: string) {
 export function IngredientsPage() {
   const {
     selectedIngredients,
-    recentIngredients,
     customIngredients,
     toggleIngredient,
     addCustomIngredient,
+    removeCustomIngredient,
   } = useCookingStore();
   const [isAddingCustom, setIsAddingCustom] = useState(false);
+  const [isManagingCustom, setIsManagingCustom] = useState(false);
+  const [pendingDeleteItem, setPendingDeleteItem] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [customName, setCustomName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<IngredientCategoryFilter>("common");
+  const [activeCategory, setActiveCategory] = useState<IngredientCategoryFilter>("vegetable");
   const debouncedSearchQuery = useDebouncedValue(searchQuery, 220);
   const activeCategoryLabel =
-    categoryFilters.find((category) => category.value === activeCategory)?.label ?? "常用";
+    categoryFilters.find((category) => category.value === activeCategory)?.label ?? "蔬菜";
   const categoryIngredients = ingredients
-    .filter((item) =>
-      activeCategory === "common"
-        ? item.isCommon
-        : item.category === activeCategory,
-    )
-    .slice(0, activeCategory === "common" ? 15 : undefined);
+    .filter((item) => item.category === activeCategory);
   const selectedIds = new Set(selectedIngredients.map((item) => item.id));
   const selectedNames = selectedIngredients
     .filter((item) => item.name?.trim())
@@ -71,10 +71,9 @@ export function IngredientsPage() {
     () => [
       ...ingredients,
       ...customIngredients,
-      ...recentIngredients,
       ...selectedIngredients,
     ],
-    [customIngredients, recentIngredients, selectedIngredients],
+    [customIngredients, selectedIngredients],
   );
   const isDuplicateCustomName =
     normalizedCustomName.length > 0 &&
@@ -91,9 +90,8 @@ export function IngredientsPage() {
       uniqueSearchResultsById([
         ...ingredients,
         ...customIngredients,
-        ...recentIngredients,
       ]).filter((item) => matchesKeyword(item, normalizedSearchQuery)),
-    [customIngredients, normalizedSearchQuery, recentIngredients],
+    [customIngredients, normalizedSearchQuery],
   );
 
   function closeCustomDialog() {
@@ -105,6 +103,15 @@ export function IngredientsPage() {
     if (!canConfirmCustom) return;
     addCustomIngredient(normalizedCustomName);
     closeCustomDialog();
+  }
+
+  function handleConfirmDeleteCustom() {
+    if (!pendingDeleteItem) return;
+    removeCustomIngredient(pendingDeleteItem.id);
+    if (customIngredients.length <= 1) {
+      setIsManagingCustom(false);
+    }
+    setPendingDeleteItem(null);
   }
 
   return (
@@ -193,12 +200,25 @@ export function IngredientsPage() {
           </section>
 
           <section className="mt-7 space-y-3">
-            <h2 className="px-1 text-[14px] font-extrabold text-[#1b1a17]">自定义食材</h2>
-            <div className="flex flex-wrap gap-2.5">
-              <CustomIngredientButton onClick={() => setIsAddingCustom(true)}>
-                添加自定义食材
-              </CustomIngredientButton>
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-[14px] font-extrabold text-[#1b1a17]">自定义食材</h2>
+              {customIngredients.length > 0 ? (
+                <button
+                  className="text-[12px] font-bold text-[#6c665d]"
+                  onClick={() => setIsManagingCustom((current) => !current)}
+                  type="button"
+                >
+                  {isManagingCustom ? "完成" : "管理"}
+                </button>
+              ) : null}
             </div>
+            {(!isManagingCustom || customIngredients.length === 0) ? (
+              <div className="flex flex-wrap gap-2.5">
+                <CustomIngredientButton onClick={() => setIsAddingCustom(true)}>
+                  添加自定义食材
+                </CustomIngredientButton>
+              </div>
+            ) : null}
             {customIngredients.length > 0 ? (
               <div className="grid grid-cols-3 gap-2.5">
                 {customIngredients.map((item) => (
@@ -206,44 +226,67 @@ export function IngredientsPage() {
                     emoji={item.emoji}
                     key={item.id}
                     name={item.name}
-                    onClick={() => toggleIngredient(item)}
+                    onClick={() => {
+                      if (isManagingCustom) return;
+                      toggleIngredient(item);
+                    }}
+                    onDelete={
+                      isManagingCustom
+                        ? () => setPendingDeleteItem({ id: item.id, name: item.name })
+                        : undefined
+                    }
                     selected={selectedIds.has(item.id)}
                   />
                 ))}
               </div>
             ) : null}
           </section>
-
-          {recentIngredients.length > 0 ? (
-            <section className="mb-24 mt-7 space-y-3">
-              <h2 className="px-1 text-[14px] font-extrabold text-[#1b1a17]">最近使用</h2>
-              <div className="flex flex-wrap gap-2.5">
-                {recentIngredients.map((item) => (
-                  <motion.button
-                    className={`h-8 rounded-full border px-3.5 text-[12px] font-semibold shadow-sm transition-colors ${
-                      selectedIds.has(item.id)
-                        ? "border-[#84c77d] bg-[#f7fff5] text-[#4d9547]"
-                        : "border-[#ebe6dd] bg-white text-[#5f594f]"
-                    }`}
-                    key={item.id}
-                    onClick={() => toggleIngredient(item)}
-                    type="button"
-                    {...chipMotionProps}
-                  >
-                    {item.name}
-                  </motion.button>
-                ))}
-              </div>
-            </section>
-          ) : (
-            <div className="mb-24" />
-          )}
+          <div className="mb-24" />
         </>
       )}
 
       <SelectedIngredientsBar names={selectedNames} />
 
       <AnimatePresence>
+        {pendingDeleteItem ? (
+          <motion.div
+            animate="animate"
+            className="fixed inset-0 z-30 flex items-end justify-center bg-black/20 px-4 pb-[calc(18px+env(safe-area-inset-bottom))] sm:items-center sm:pb-0"
+            exit="exit"
+            initial="initial"
+            variants={modalBackdropVariants}
+          >
+            <motion.section
+              className="w-full max-w-[398px] rounded-[22px] border border-[#eeeae4] bg-[#fbfaf8] p-4 shadow-[0_18px_48px_rgba(22,20,18,0.18)]"
+              variants={modalPanelVariants}
+            >
+              <h2 className="text-[17px] font-black text-[#151411]">删除自定义食材？</h2>
+              <p className="mt-2 text-[12px] font-semibold leading-5 text-[#9b958d]">
+                删除自定义食材「{pendingDeleteItem.name}」？删除后也会从本次已选食材中移除。
+              </p>
+
+              <div className="mt-5 flex gap-2">
+                <motion.button
+                  className="h-11 flex-1 rounded-[14px] bg-[#f1eee8] text-[14px] font-bold text-[#5f594f]"
+                  onClick={() => setPendingDeleteItem(null)}
+                  type="button"
+                  {...motionTapProps}
+                >
+                  取消
+                </motion.button>
+                <motion.button
+                  className="h-11 flex-1 rounded-[14px] bg-[#111] text-[14px] font-bold text-white"
+                  onClick={handleConfirmDeleteCustom}
+                  type="button"
+                  {...motionTapProps}
+                >
+                  确认删除
+                </motion.button>
+              </div>
+            </motion.section>
+          </motion.div>
+        ) : null}
+
         {isAddingCustom ? (
         <motion.div
           animate="animate"

@@ -1,7 +1,8 @@
 export type IngredientCategory =
   | "common"
   | "vegetable"
-  | "meat_egg_dairy"
+  | "meat_seafood"
+  | "egg_processed"
   | "soy"
   | "staple"
   | "frozen"

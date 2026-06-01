@@ -1,5 +1,6 @@
 import type { CookingPreferences } from "./preference";
 import type { RecentIngredients, SelectedIngredients } from "./ingredient";
+import type { LlmConfig } from "./llm";
 import type { Recipe } from "./recipe";
 import type { SeasoningLibrary } from "./seasoning";
 
@@ -10,6 +11,7 @@ export const STORAGE_KEYS = {
   SEASONING_LIBRARY: "seasoningLibrary",
   COOKING_PREFERENCES: "cookingPreferences",
   LAST_GENERATED_RECIPES: "lastGeneratedRecipes",
+  LLM_CONFIG: "llmConfig",
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
@@ -21,4 +23,5 @@ export type LocalStorageSchema = {
   [STORAGE_KEYS.SEASONING_LIBRARY]: SeasoningLibrary;
   [STORAGE_KEYS.COOKING_PREFERENCES]: CookingPreferences;
   [STORAGE_KEYS.LAST_GENERATED_RECIPES]: Recipe[];
+  [STORAGE_KEYS.LLM_CONFIG]: LlmConfig;
 };

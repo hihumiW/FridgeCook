@@ -1,5 +1,5 @@
 type RecipeItemGridProps = {
-  items: readonly { name: string; emoji: string }[];
+  items: readonly { name: string; emoji?: string }[];
   itemBackground?: boolean;
 };
 
@@ -16,7 +16,7 @@ export function RecipeItemGrid({
           }`}
           key={item.name}
         >
-          <span className="text-[32px]">{item.emoji}</span>
+          {item.emoji ? <span className="text-[32px]">{item.emoji}</span> : null}
           <span className="text-[11px] font-semibold text-[#5c554d]">
             {item.name}
           </span>
