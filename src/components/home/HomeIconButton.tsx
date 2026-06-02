@@ -22,6 +22,7 @@ export function HomeIconButton({ children, label, onClick, to }: HomeIconButtonP
       <MotionLink
         aria-label={label}
         className={className}
+        replace
         to={to}
         {...smallMotionTapProps}
       >

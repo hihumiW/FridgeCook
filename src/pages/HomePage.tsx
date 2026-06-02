@@ -104,7 +104,7 @@ export function HomePage() {
     if (!success) return;
 
     rememberSelectedIngredients();
-    navigate("/results");
+    navigate("/results", { replace: true });
   }
 
   function handleConfirmReset() {
@@ -149,6 +149,7 @@ export function HomePage() {
           <Link
             aria-label="进入本次食材选择页"
             className="block"
+            replace
             to="/ingredients"
           >
             <SummaryCard
@@ -178,6 +179,7 @@ export function HomePage() {
           <Link
             aria-label="进入调料库管理页"
             className="block"
+            replace
             to="/seasonings"
           >
             <SummaryCard

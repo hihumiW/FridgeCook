@@ -24,12 +24,14 @@ export function RecipeDetailPage() {
           <div className="mt-5 flex gap-2">
             <Link
               className="flex h-11 flex-1 items-center justify-center rounded-[14px] bg-[#f1eee8] text-[13px] font-bold text-[#5f594f]"
+              replace
               to="/results"
             >
               返回结果
             </Link>
             <Link
               className="flex h-11 flex-1 items-center justify-center rounded-[14px] bg-[#111] text-[13px] font-bold text-white"
+              replace
               to="/"
             >
               回首页

@@ -19,6 +19,7 @@ export function RecipeResultCard({ recipe }: RecipeResultCardProps) {
     <MotionLink
       aria-label={`查看 ${recipe.name} 详情`}
       className="block rounded-[18px] border border-[#eeeae4] bg-white p-3.5 shadow-[0_8px_26px_rgba(27,24,20,0.07)] transition-shadow hover:shadow-[0_12px_30px_rgba(27,24,20,0.1)]"
+      replace
       to={`/recipe/${recipe.id}`}
       {...cardMotionProps}
     >
