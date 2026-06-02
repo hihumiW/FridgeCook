@@ -106,7 +106,6 @@
     --food-rotate-end: -16deg;
     animation-delay: 0.36s;
   }
-
 }
 
 @keyframes recipe-pan-toss {
@@ -187,13 +186,5 @@
 
   50% {
     opacity: 1;
-  }
-}
-
-@media (max-width: 767px) {
-  input,
-  textarea,
-  select {
-    font-size: 16px !important;
   }
 }
