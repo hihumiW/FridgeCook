@@ -31,6 +31,7 @@ export const seasonings = [
     category: "basic",
     emoji: "🫙",
     aliases: ["老酱油", "红烧酱油"],
+    isDefault: true,
   },
   {
     id: "vinegar",
@@ -38,6 +39,7 @@ export const seasonings = [
     category: "basic",
     emoji: "🧪",
     aliases: ["陈醋", "香醋", "镇江香醋", "白醋", "米醋"],
+    isDefault: true,
   },
   {
     id: "sugar",
@@ -45,13 +47,7 @@ export const seasonings = [
     category: "basic",
     emoji: "🧊",
     aliases: ["白糖", "砂糖", "冰糖", "黄冰糖"],
-  },
-  {
-    id: "cornstarch",
-    name: "淀粉",
-    category: "basic",
-    emoji: "🥣",
-    aliases: ["生粉", "玉米淀粉", "水淀粉"],
+    isDefault: true,
   },
   {
     id: "sesame_oil",
@@ -59,6 +55,7 @@ export const seasonings = [
     category: "basic",
     emoji: "🫙",
     aliases: ["芝麻油", "麻油"],
+    isDefault: true,
   },
   {
     id: "pig_oil",
@@ -66,6 +63,14 @@ export const seasonings = [
     category: "basic",
     emoji: "🍾",
     aliases: ["荤油"],
+    isDefault: true,
+  },
+  {
+    id: "cornstarch",
+    name: "淀粉",
+    category: "basic",
+    emoji: "🥣",
+    aliases: ["生粉", "玉米淀粉", "水淀粉"],
   },
   {
     id: "garlic",
@@ -136,14 +141,7 @@ export const seasonings = [
     aliases: ["耗油"],
     isCommon: true,
   },
-  {
-    id: "cooking_wine",
-    name: "料酒",
-    category: "flavor_booster",
-    emoji: "🍶",
-    aliases: ["黄酒", "绍兴酒"],
-    isCommon: true,
-  },
+
   {
     id: "chicken_bouillon",
     name: "鸡精",
@@ -159,14 +157,7 @@ export const seasonings = [
     emoji: "✨",
     aliases: ["味素"],
   },
-  {
-    id: "pepper",
-    name: "胡椒粉",
-    category: "flavor_booster",
-    emoji: "🫘",
-    aliases: ["白胡椒", "白胡椒粉", "黑胡椒", "黑胡椒粉", "现磨黑椒"],
-    isCommon: true,
-  },
+
   {
     id: "doubanjiang",
     name: "郫县豆瓣酱",
@@ -203,11 +194,20 @@ export const seasonings = [
     aliases: ["阳江豆豉", "豉汁"],
   },
   {
-    id: "sweet_bean_paste",
-    name: "甜面酱",
+    id: "cooking_wine",
+    name: "料酒",
     category: "flavor_booster",
-    emoji: "🫙",
-    aliases: ["甜酱"],
+    emoji: "🍶",
+    aliases: ["黄酒", "绍兴酒"],
+    isCommon: true,
+  },
+  {
+    id: "pepper",
+    name: "胡椒粉",
+    category: "flavor_booster",
+    emoji: "🫘",
+    aliases: ["白胡椒", "白胡椒粉", "黑胡椒", "黑胡椒粉", "现磨黑椒"],
+    isCommon: true,
   },
   {
     id: "sesame_paste",
@@ -237,34 +237,7 @@ export const seasonings = [
     emoji: "🫚",
     aliases: ["仔姜"],
   },
-  {
-    id: "plum_sauce",
-    name: "酸梅酱",
-    category: "advanced",
-    emoji: "🫙",
-    aliases: ["梅子酱"],
-  },
-  {
-    id: "rice_wine",
-    name: "米酒",
-    category: "advanced",
-    emoji: "🍶",
-    aliases: ["酒酿", "醪糟"],
-  },
-  {
-    id: "five_spice",
-    name: "五香粉",
-    category: "advanced",
-    emoji: "🧂",
-    aliases: ["十三香"],
-  },
-  {
-    id: "curry",
-    name: "咖喱块",
-    category: "advanced",
-    emoji: "🍛",
-    aliases: ["咖喱"],
-  },
+
   {
     id: "gochujang",
     name: "韩式辣酱",
@@ -285,6 +258,20 @@ export const seasonings = [
     category: "advanced",
     emoji: "🔥",
     aliases: ["烧烤粉", "烤肉料"],
+  },
+  {
+    id: "curry",
+    name: "咖喱块",
+    category: "advanced",
+    emoji: "🍛",
+    aliases: ["咖喱"],
+  },
+  {
+    id: "five_spice",
+    name: "五香粉",
+    category: "advanced",
+    emoji: "🧂",
+    aliases: ["十三香"],
   },
   {
     id: "butter",

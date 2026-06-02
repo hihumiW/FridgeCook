@@ -70,7 +70,10 @@ type CookingStore = {
   /** 清空当前菜谱结果。 */
   clearGeneratedRecipes: () => void;
   /** 根据当前页面状态调用 LLM 生成菜谱。 */
-  generateRecipes: (options?: { extraPrompt?: string }) => Promise<boolean>;
+  generateRecipes: (options?: {
+    extraPrompt?: string;
+    previousRecipes?: Recipe[];
+  }) => Promise<boolean>;
   /** 清空最近一次生成错误。 */
   clearGenerateRecipeError: () => void;
   /** 保存浏览器直连 LLM 的本地配置。 */
@@ -405,8 +408,9 @@ export const useCookingStore = create<CookingStore>()(
       clearGenerateRecipeError: () => set({ generateRecipeError: null }),
 
       generateRecipes: async (options) => {
+        const baseRequest = get().buildGenerateRecipeRequest();
         const request = appendExtraPrompt(
-          get().buildGenerateRecipeRequest(),
+          baseRequest,
           options?.extraPrompt,
         );
         const llmConfig = get().llmConfig;
@@ -424,7 +428,11 @@ export const useCookingStore = create<CookingStore>()(
         set({ generateRecipeError: null, isGeneratingRecipes: true });
 
         try {
-          const recipes = await generateRecipesWithLlm(request, llmConfig);
+          const recipes = await generateRecipesWithLlm(request, llmConfig, {
+            previousUserRequest: baseRequest,
+            previousRecipes: options?.previousRecipes,
+            regenerationRequest: options?.extraPrompt,
+          });
           set({
             generatedRecipes: recipes,
             generateRecipeError: null,

@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 
 import { ingredients, seasonings } from "@/data";
+import recipeSystemPromptMarkdown from "@/lib/recipePrompt.md?raw";
 import type {
   GenerateRecipeRequest,
   GenerateRecipeResponse,
@@ -12,6 +13,75 @@ import type {
 
 const minDifficulty = 0;
 const maxDifficulty = 5;
+const recipeSystemPrompt = recipeSystemPromptMarkdown.trimEnd();
+
+type GenerateRecipesWithLlmOptions = {
+  previousUserRequest?: GenerateRecipeRequest;
+  previousRecipes?: Recipe[];
+  regenerationRequest?: string;
+};
+
+function isDeepSeekBaseUrl(baseUrl: string) {
+  try {
+    return new URL(baseUrl).hostname
+      .toLocaleLowerCase()
+      .includes("deepseek.com");
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 根据用户输入的 Base URL 和 Model， 禁用思考功能
+ * @param {string} baseUrl 用户输入的地址
+ * @param {string} modelName 用户输入的模型名
+ * @param {boolean} disableThinking 是否需要禁用思考（比如基于精力值选项）
+ */
+function buildThinking(
+  baseUrl: string,
+  modelName: string,
+  disableThinking = true,
+) {
+  if (!disableThinking) return {};
+
+  const url = (baseUrl || "").toLowerCase();
+  const model = (modelName || "").toLowerCase();
+
+  // 1. 特征一：用户连接的是【阿里百炼平台】
+  // 阿里百炼官方兼容端点通常包含 dashscope.aliyuncs.com
+  if (url.includes("dashscope.aliyuncs.com")) {
+    return { enable_thinking: false };
+  }
+
+  // 2. 特征二：用户连接的是【DeepSeek 官方平台】
+  // 官方端点通常包含 api.deepseek.com
+  if (url.includes("api.deepseek.com")) {
+    return {
+      extra_body: {
+        thinking: { type: "disabled" },
+      },
+    };
+  }
+
+  // 3. 特征三：兜底策略（如果用户用了中转 API，比如 One-API/New-API 或自定义反代）
+  // 此时 URL 被模糊了，我们只能死马当活马医，通过【模型名称】来瞎猜
+  if (model.includes("qwen")) {
+    // 猜它底层走的是阿里的规矩，或者兼容阿里的通义规范
+    return { enable_thinking: false };
+  }
+
+  if (model.includes("deepseek")) {
+    // 猜它走的是 DeepSeek 官方或主流中转的参数规范
+    return {
+      extra_body: {
+        thinking: { type: "disabled" },
+      },
+    };
+  }
+
+  // 4. 如果完全认不出来（比如自定义开源模型），则不带任何特异性参数，避免请求直接报错 400
+  return {};
+}
 
 export const recipeResponseJsonSchema = {
   type: "object",
@@ -58,53 +128,6 @@ export const recipeResponseJsonSchema = {
   },
 } as const;
 
-// 由于deepseek 不支持schema, 因此单独为它补充一套校验规则，放在提示词里，让模型自己遵守。
-const deepSeekJsonShapeRules = [
-  "JSON 顶层必须是一个对象，格式如下：",
-  "{",
-  '  "recipes": [',
-  "    {",
-  '      "name": "string",',
-  '      "estimatedTime": "string，例如 15 分钟",',
-  '      "difficulty": 1,',
-  '      "servings": 2,',
-  '      "usedIngredients": ["string"],',
-  '      "usedSeasonings": ["string"],',
-  '      "reason": "string",',
-  '      "steps": ["string"],',
-  '      "warnings": ["string"],',
-  '      "substitutions": ["string"]',
-  "    }",
-  "  ]",
-  "}",
-  "字段要求：",
-  "- recipes 必须是数组，至少 1 个，最多 5 个。",
-  '- estimatedTime 必须是字符串，例如 "10 分钟"，不要只返回数字。',
-  "- difficulty 必须是 0 到 5 的数字，0 最简单，5 最困难。",
-  "- usedIngredients、usedSeasonings、steps、warnings、substitutions 必须是字符串数组。",
-  "- substitutions 必须是字符串数组，不要返回对象。",
-  "- warnings 是翻车提醒：提醒火候、时间、口感、调味或容易失败的点。没有则返回空数组。",
-  "- substitutions 是可替代方案：说明缺少某个食材/调料时可以怎么替换，或哪些可以省略。没有则返回空数组。",
-  "- 不要添加 schema 之外的字段。",
-  "合法输出示例：",
-  "{",
-  '  "recipes": [',
-  "    {",
-  '      "name": "番茄炒蛋",',
-  '      "estimatedTime": "10 分钟",',
-  '      "difficulty": 1,',
-  '      "servings": 2,',
-  '      "usedIngredients": ["番茄", "鸡蛋"],',
-  '      "usedSeasonings": ["食用油", "盐"],',
-  '      "reason": "快手、下饭，适合现在的食材。",',
-  '      "steps": ["番茄切块，鸡蛋打散。", "热锅放油，先炒鸡蛋盛出。", "下番茄炒出汁，倒回鸡蛋，加盐调味。"],',
-  '      "warnings": ["番茄要炒出汁再放鸡蛋，否则味道会偏寡。"],',
-  '      "substitutions": ["没有白糖可以不放，番茄偏酸时再少量加一点。"]',
-  "    }",
-  "  ]",
-  "}",
-].join("\n");
-
 export function normalizeGenerateRecipeRequest(
   request: GenerateRecipeRequest,
 ): GenerateRecipeRequest {
@@ -140,56 +163,39 @@ export function appendExtraPrompt(
 
 export function buildRecipeMessages(
   request: GenerateRecipeRequest,
-  options: { includeJsonShapeRules?: boolean } = {},
+  options: GenerateRecipesWithLlmOptions = {},
 ): ChatCompletionMessageParam[] {
-  const systemRules = [
-    "你是一个精通各种菜系的大厨，负责根据用户已有食材、调料、人数、精力值和偏好，生成今晚可以做的菜。",
-    "availableIngredients 是可用食材池，不是每道菜必须全部使用的清单。",
-    "availableSeasonings 是可用调料池，不是每道菜必须全部使用的清单。",
-    "你应该从可用食材池和调料池中挑选合适的子集进行组合，每道菜只使用适合它的食材和调料。",
-    "不要为了覆盖所有食材而把它们硬塞进一道菜，也不要把所有调料都列进每道菜。",
-    "如果可用食材较多，优先生成多道互补的菜，形成一顿饭的组合，例如主菜、快手菜、素菜、汤菜等。",
-    "如果可用食材数量 >= 5，通常返回 2 到 4 道菜；如果可用食材数量 >= 8，通常返回 3 到 5 道菜。",
-    "只有在食材很少，或用户明确要求简单、少洗锅、一锅出时，才返回 1 道菜。",
-    "除非用户明确要求一锅出或少洗锅，否则不要默认生成一锅熟、乱炖、杂烩类菜。",
-    "请至少返回 1 道菜，最多返回 5 道菜；根据食材数量、调料数量、人数和精力值自行决定数量。",
-    "不要为了凑数量而引入用户没有的食材或调料。",
-    "如果确实使用了额外食材或调料，必须在 warnings 中明确提醒。",
-    "如果 tastePreferences 与 userPrompt 存在冲突，以 userPrompt 为准。",
-    "步骤要尽可能详细, 步骤中包含用量、时间等关键信息、适合普通家庭厨房执行。",
-    "difficulty 是 0 到 5 的数字，代表难度等级：0 最简单，5 最困难。",
-    "warnings 是翻车提醒：写做这道菜最容易失败、口感变差或需要注意的地方。",
-    "substitutions 是可替代方案：写缺少某个食材/调料时可以怎么替换，或可以省略什么。",
-    "你必须只输出 JSON，不要输出 Markdown 或额外解释。",
-  ];
-
-  if (options.includeJsonShapeRules) {
-    systemRules.push(deepSeekJsonShapeRules);
-  } else {
-    systemRules.push(
-      'JSON 顶层结构必须是 {"recipes": [...]}，recipes 中的每个对象必须包含 name、estimatedTime、difficulty、servings、usedIngredients、usedSeasonings、reason、steps、warnings、substitutions。',
-    );
-  }
+  const previousRecipes = normalizePreviousRecipes(options.previousRecipes);
+  const userMessage = {
+    availableIngredients: request.ingredients,
+    availableSeasonings: request.seasonings,
+    peopleCount: request.peopleCount,
+    energyLevel: request.energyLevel,
+    tastePreferences: request.tastePreferences,
+    userRequest: request.userPrompt ?? "",
+    ...(previousRecipes.length > 0
+      ? {
+          regenerationContext: {
+            previousUserRequest: normalizeGenerateRecipeRequest(
+              options.previousUserRequest ?? request,
+            ),
+            previousRecipes,
+            regenerationRequest: normalizeRegenerationRequest(
+              options.regenerationRequest,
+            ),
+          },
+        }
+      : {}),
+  };
 
   return [
     {
       role: "system",
-      content: systemRules.join("\n"),
+      content: recipeSystemPrompt,
     },
     {
       role: "user",
-      content: JSON.stringify(
-        {
-          availableIngredients: request.ingredients,
-          availableSeasonings: request.seasonings,
-          peopleCount: request.peopleCount,
-          energyLevel: request.energyLevel,
-          tastePreferences: request.tastePreferences,
-          userRequest: request.userPrompt ?? "",
-        },
-        null,
-        2,
-      ),
+      content: JSON.stringify(userMessage, null, 2),
     },
   ];
 }
@@ -197,6 +203,7 @@ export function buildRecipeMessages(
 export async function generateRecipesWithLlm(
   request: GenerateRecipeRequest,
   llmConfig: LlmConfig,
+  options: GenerateRecipesWithLlmOptions = {},
 ): Promise<Recipe[]> {
   const normalizedConfig = normalizeLlmConfig(llmConfig);
   if (
@@ -226,10 +233,13 @@ export async function generateRecipesWithLlm(
     const response = await client.chat.completions.create({
       model: normalizedConfig.model,
       temperature: normalizedConfig.temperature,
-      messages: buildRecipeMessages(normalizedRequest, {
-        includeJsonShapeRules: isDeepSeekBaseUrl(normalizedConfig.baseUrl),
-      }),
+      messages: buildRecipeMessages(normalizedRequest, options),
       response_format: buildResponseFormat(normalizedConfig.baseUrl),
+      ...(buildThinking(
+        normalizedConfig.baseUrl,
+        normalizedConfig.model,
+        true,
+      ) as any),
     });
 
     const content = response.choices[0]?.message?.content;
@@ -246,6 +256,27 @@ export async function generateRecipesWithLlm(
   }
 }
 
+function normalizePreviousRecipes(recipes?: Recipe[]) {
+  if (!recipes?.length) return [];
+
+  return recipes.slice(0, 5).map((recipe) => ({
+    name: recipe.name,
+    estimatedTime: recipe.estimatedTime,
+    difficulty: recipe.difficulty,
+    servings: recipe.servings,
+    usedIngredients: recipe.usedIngredients,
+    usedSeasonings: recipe.usedSeasonings,
+    reason: recipe.reason,
+    steps: recipe.steps,
+    warnings: recipe.warnings,
+    substitutions: recipe.substitutions,
+  }));
+}
+
+function normalizeRegenerationRequest(value?: string) {
+  return value?.trim().slice(0, 200) ?? "";
+}
+
 function buildResponseFormat(baseUrl: string) {
   if (isDeepSeekBaseUrl(baseUrl)) {
     return { type: "json_object" as const };
@@ -259,16 +290,6 @@ function buildResponseFormat(baseUrl: string) {
       schema: recipeResponseJsonSchema,
     },
   };
-}
-
-function isDeepSeekBaseUrl(baseUrl: string) {
-  try {
-    return new URL(baseUrl).hostname
-      .toLocaleLowerCase()
-      .includes("deepseek.com");
-  } catch {
-    return false;
-  }
 }
 
 export function parseAndValidateRecipeResponse(

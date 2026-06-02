@@ -40,6 +40,12 @@ export function RecipeDetailPage() {
     );
   }
 
+  const warnings = recipe.warnings.filter((warning) => warning.trim());
+  const substitutions = recipe.substitutions.filter((substitution) =>
+    substitution.trim(),
+  );
+  const hasTips = warnings.length > 0 || substitutions.length > 0;
+
   return (
     <DeviceFrame>
       <AppTopBar backTo="/results" showReset={false} />
@@ -70,25 +76,35 @@ export function RecipeDetailPage() {
         </div>
       </section>
 
-      <section className="mt-4 space-y-6 rounded-[18px] border border-[#eeeae4] bg-white p-4 shadow-[0_8px_26px_rgba(27,24,20,0.07)]">
-        <div className="space-y-2">
-          <h2 className="text-[14px] font-extrabold text-[#1b1a17]">翻车提醒</h2>
-          <div className="space-y-1 text-[13px] font-semibold leading-6 text-[#5c554d]">
-            {recipe.warnings.map((warning) => (
-              <p key={warning}>{warning}</p>
-            ))}
-          </div>
-        </div>
+      {hasTips ? (
+        <section className="mt-4 space-y-6 rounded-[18px] border border-[#eeeae4] bg-white p-4 shadow-[0_8px_26px_rgba(27,24,20,0.07)]">
+          {warnings.length > 0 ? (
+            <div className="space-y-2">
+              <h2 className="text-[14px] font-extrabold text-[#1b1a17]">
+                翻车提醒
+              </h2>
+              <div className="space-y-1 text-[13px] font-semibold leading-6 text-[#5c554d]">
+                {warnings.map((warning) => (
+                  <p key={warning}>{warning}</p>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
-        <div className="space-y-2">
-          <h2 className="text-[14px] font-extrabold text-[#1b1a17]">可替换方案</h2>
-          <div className="space-y-1 text-[13px] font-semibold leading-6 text-[#5c554d]">
-            {recipe.substitutions.map((substitution) => (
-              <p key={substitution}>{substitution}</p>
-            ))}
-          </div>
-        </div>
-      </section>
+          {substitutions.length > 0 ? (
+            <div className="space-y-2">
+              <h2 className="text-[14px] font-extrabold text-[#1b1a17]">
+                可替换方案
+              </h2>
+              <div className="space-y-1 text-[13px] font-semibold leading-6 text-[#5c554d]">
+                {substitutions.map((substitution) => (
+                  <p key={substitution}>{substitution}</p>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
     </DeviceFrame>
   );
 }

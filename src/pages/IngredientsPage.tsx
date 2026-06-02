@@ -45,11 +45,13 @@ export function IngredientsPage() {
     selectedIngredients,
     customIngredients,
     toggleIngredient,
+    clearSelectedIngredients,
     addCustomIngredient,
     removeCustomIngredient,
   } = useCookingStore();
   const [isAddingCustom, setIsAddingCustom] = useState(false);
   const [isManagingCustom, setIsManagingCustom] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [pendingDeleteItem, setPendingDeleteItem] = useState<{
     id: string;
     name: string;
@@ -114,9 +116,14 @@ export function IngredientsPage() {
     setPendingDeleteItem(null);
   }
 
+  function handleConfirmReset() {
+    clearSelectedIngredients();
+    setIsResetConfirmOpen(false);
+  }
+
   return (
     <DeviceFrame>
-      <AppTopBar showReset={false} />
+      <AppTopBar onReset={() => setIsResetConfirmOpen(true)} />
 
       <header className="mt-6 px-1 text-left">
         <h1 className="text-[24px] font-black leading-8 tracking-normal text-[#151411]">今晚冰箱里有什么？</h1>
@@ -245,9 +252,54 @@ export function IngredientsPage() {
         </>
       )}
 
-      <SelectedIngredientsBar names={selectedNames} />
+      <AnimatePresence>
+        {selectedNames.length > 0 ? (
+          <SelectedIngredientsBar names={selectedNames} />
+        ) : null}
+      </AnimatePresence>
 
       <AnimatePresence>
+        {isResetConfirmOpen ? (
+          <motion.div
+            animate="animate"
+            className="fixed inset-0 z-30 flex items-end justify-center bg-black/20 px-4 pb-[calc(18px+env(safe-area-inset-bottom))] sm:items-center sm:pb-0"
+            exit="exit"
+            initial="initial"
+            variants={modalBackdropVariants}
+          >
+            <motion.section
+              className="w-full max-w-[398px] rounded-[22px] border border-[#eeeae4] bg-[#fbfaf8] p-4 shadow-[0_18px_48px_rgba(22,20,18,0.18)]"
+              variants={modalPanelVariants}
+            >
+              <h2 className="text-[17px] font-black text-[#151411]">
+                清空本次食材？
+              </h2>
+              <p className="mt-2 text-[12px] font-semibold leading-5 text-[#9b958d]">
+                会清空当前已选食材，不会影响调料库和自定义食材。
+              </p>
+
+              <div className="mt-5 flex gap-2">
+                <motion.button
+                  className="h-11 flex-1 rounded-[14px] bg-[#f1eee8] text-[14px] font-bold text-[#5f594f]"
+                  onClick={() => setIsResetConfirmOpen(false)}
+                  type="button"
+                  {...motionTapProps}
+                >
+                  取消
+                </motion.button>
+                <motion.button
+                  className="h-11 flex-1 rounded-[14px] bg-[#111] text-[14px] font-bold text-white"
+                  onClick={handleConfirmReset}
+                  type="button"
+                  {...motionTapProps}
+                >
+                  确认清空
+                </motion.button>
+              </div>
+            </motion.section>
+          </motion.div>
+        ) : null}
+
         {pendingDeleteItem ? (
           <motion.div
             animate="animate"

@@ -53,10 +53,13 @@ const tasteOptions: TastePreference[] = [
 ];
 
 const MotionButton = motion.button;
+const summaryPreviewLimit = 5;
 
 export function HomePage() {
   const navigate = useNavigate();
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [isIngredientsExpanded, setIsIngredientsExpanded] = useState(false);
+  const [isSeasoningsExpanded, setIsSeasoningsExpanded] = useState(false);
   const {
     clearGeneratedRecipes,
     clearSelectedIngredients,
@@ -81,8 +84,18 @@ export function HomePage() {
   const validSelectedSeasonings = seasoningLibrary.selectedSeasonings.filter(
     (item) => item.name?.trim(),
   );
-  const ingredientPreview = validSelectedIngredients;
-  const seasoningPreview = validSelectedSeasonings;
+  const ingredientPreview = isIngredientsExpanded
+    ? validSelectedIngredients
+    : validSelectedIngredients.slice(0, summaryPreviewLimit);
+  const seasoningPreview = isSeasoningsExpanded
+    ? validSelectedSeasonings
+    : validSelectedSeasonings.slice(0, summaryPreviewLimit);
+  const ingredientOverflowCount = isIngredientsExpanded
+    ? 0
+    : Math.max(0, validSelectedIngredients.length - ingredientPreview.length);
+  const seasoningOverflowCount = isSeasoningsExpanded
+    ? 0
+    : Math.max(0, validSelectedSeasonings.length - seasoningPreview.length);
 
   async function handleGenerate() {
     if (validSelectedIngredients.length === 0 || isGeneratingRecipes) return;
@@ -139,7 +152,15 @@ export function HomePage() {
             to="/ingredients"
           >
             <SummaryCard
+              isExpanded={isIngredientsExpanded}
+              onToggleExpanded={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setIsIngredientsExpanded((current) => !current);
+              }}
+              overflowCount={ingredientOverflowCount}
               title="本次食材"
+              toggleLabel={isIngredientsExpanded ? "收起" : "展开全部"}
               subtitle={`已选 ${validSelectedIngredients.length} 种`}
             >
               {ingredientPreview.length > 0 ? (
@@ -150,11 +171,7 @@ export function HomePage() {
                     name={item.name}
                   />
                 ))
-              ) : (
-                <span className="text-[12px] font-semibold text-[#aaa39a]">
-                  还没选食材
-                </span>
-              )}
+              ) : null}
             </SummaryCard>
           </Link>
 
@@ -164,7 +181,15 @@ export function HomePage() {
             to="/seasonings"
           >
             <SummaryCard
+              isExpanded={isSeasoningsExpanded}
+              onToggleExpanded={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setIsSeasoningsExpanded((current) => !current);
+              }}
+              overflowCount={seasoningOverflowCount}
               title="我的调料库"
+              toggleLabel={isSeasoningsExpanded ? "收起" : "展开全部"}
               subtitle={`已保存 ${validSelectedSeasonings.length} 种`}
             >
               {seasoningPreview.length > 0 ? (
@@ -175,11 +200,7 @@ export function HomePage() {
                     name={item.name}
                   />
                 ))
-              ) : (
-                <span className="text-[12px] font-semibold text-[#aaa39a]">
-                  还没设置调料
-                </span>
-              )}
+              ) : null}
             </SummaryCard>
           </Link>
 
