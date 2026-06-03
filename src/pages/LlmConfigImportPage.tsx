@@ -54,7 +54,7 @@ export function LlmConfigImportPage() {
     if (!canImport) return;
 
     setLlmConfig(importedConfig);
-    navigate("/", { replace: true });
+    navigate("/");
   }, [canImport, importedConfig, navigate, setLlmConfig]);
 
   return (
@@ -99,14 +99,12 @@ export function LlmConfigImportPage() {
               <div className="mt-5 flex gap-2">
                 <Link
                   className="flex h-11 flex-1 items-center justify-center rounded-[14px] bg-[#f1eee8] text-[13px] font-bold text-[#5f594f]"
-                  replace
                   to="/"
                 >
                   回首页
                 </Link>
                 <Link
                   className="flex h-11 flex-1 items-center justify-center rounded-[14px] bg-[#111] text-[13px] font-bold text-white"
-                  replace
                   to="/llm-config"
                 >
                   手动配置

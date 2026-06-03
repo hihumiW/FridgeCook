@@ -104,7 +104,7 @@ export function HomePage() {
     if (!success) return;
 
     rememberSelectedIngredients();
-    navigate("/results", { replace: true });
+    navigate("/results");
   }
 
   function handleConfirmReset() {
@@ -149,7 +149,6 @@ export function HomePage() {
           <Link
             aria-label="进入本次食材选择页"
             className="block"
-            replace
             to="/ingredients"
           >
             <SummaryCard
@@ -164,22 +163,21 @@ export function HomePage() {
               toggleLabel={isIngredientsExpanded ? "收起" : "展开全部"}
               subtitle={`已选 ${validSelectedIngredients.length} 种`}
             >
-              {ingredientPreview.length > 0 ? (
-                ingredientPreview.map((item) => (
-                  <SummaryItemPreview
-                    emoji={item.emoji}
-                    key={item.id}
-                    name={item.name}
-                  />
-                ))
-              ) : null}
+              {ingredientPreview.length > 0
+                ? ingredientPreview.map((item) => (
+                    <SummaryItemPreview
+                      emoji={item.emoji}
+                      key={item.id}
+                      name={item.name}
+                    />
+                  ))
+                : null}
             </SummaryCard>
           </Link>
 
           <Link
             aria-label="进入调料库管理页"
             className="block"
-            replace
             to="/seasonings"
           >
             <SummaryCard
@@ -194,15 +192,15 @@ export function HomePage() {
               toggleLabel={isSeasoningsExpanded ? "收起" : "展开全部"}
               subtitle={`已保存 ${validSelectedSeasonings.length} 种`}
             >
-              {seasoningPreview.length > 0 ? (
-                seasoningPreview.map((item) => (
-                  <SummaryItemPreview
-                    emoji={item.emoji}
-                    key={item.id}
-                    name={item.name}
-                  />
-                ))
-              ) : null}
+              {seasoningPreview.length > 0
+                ? seasoningPreview.map((item) => (
+                    <SummaryItemPreview
+                      emoji={item.emoji}
+                      key={item.id}
+                      name={item.name}
+                    />
+                  ))
+                : null}
             </SummaryCard>
           </Link>
 

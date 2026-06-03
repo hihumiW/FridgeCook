@@ -13,7 +13,12 @@ type HomeIconButtonProps = {
 
 const MotionLink = motion.create(Link);
 
-export function HomeIconButton({ children, label, onClick, to }: HomeIconButtonProps) {
+export function HomeIconButton({
+  children,
+  label,
+  onClick,
+  to,
+}: HomeIconButtonProps) {
   const className =
     "flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-[#1e1d19] shadow-[0_8px_24px_rgba(30,28,24,0.08)] ring-1 ring-black/[0.03] transition-shadow hover:shadow-[0_10px_26px_rgba(30,28,24,0.12)]";
 
@@ -22,7 +27,6 @@ export function HomeIconButton({ children, label, onClick, to }: HomeIconButtonP
       <MotionLink
         aria-label={label}
         className={className}
-        replace
         to={to}
         {...smallMotionTapProps}
       >

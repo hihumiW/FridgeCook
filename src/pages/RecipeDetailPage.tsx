@@ -24,14 +24,12 @@ export function RecipeDetailPage() {
           <div className="mt-5 flex gap-2">
             <Link
               className="flex h-11 flex-1 items-center justify-center rounded-[14px] bg-[#f1eee8] text-[13px] font-bold text-[#5f594f]"
-              replace
               to="/results"
             >
               返回结果
             </Link>
             <Link
               className="flex h-11 flex-1 items-center justify-center rounded-[14px] bg-[#111] text-[13px] font-bold text-white"
-              replace
               to="/"
             >
               回首页
@@ -58,7 +56,9 @@ export function RecipeDetailPage() {
 
       {recipe.riskFlags?.length ? (
         <section className="mt-4 rounded-[18px] border border-[#f0e1ba] bg-[#fff9e9] p-4 text-[12px] font-semibold leading-5 text-[#9a6a1e] shadow-[0_8px_26px_rgba(27,24,20,0.05)]">
-          <h2 className="text-[14px] font-extrabold text-[#8a5a12]">注意一下</h2>
+          <h2 className="text-[14px] font-extrabold text-[#8a5a12]">
+            注意一下
+          </h2>
           <div className="mt-2 space-y-1">
             {recipe.riskFlags.map((riskFlag) => (
               <p key={riskFlag}>{riskFlag}</p>

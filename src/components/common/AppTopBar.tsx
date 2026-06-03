@@ -25,7 +25,6 @@ export function AppTopBar({
       <MotionLink
         aria-label="返回"
         className={controlClassName}
-        replace
         to={backTo}
         {...smallMotionTapProps}
       >
