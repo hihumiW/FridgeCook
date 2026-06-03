@@ -64,7 +64,7 @@ export function ResultsPage() {
       <footer className="mt-5 space-y-3 pb-2">
         {hasRecipes ? (
           <Fragment>
-            <section className="space-y-2">
+            <section className="space-y-3">
               <h2 className="px-1 text-[14px] font-extrabold text-[#1b1a17]">
                 这次想换成什么感觉？
               </h2>
@@ -80,15 +80,17 @@ export function ResultsPage() {
                   {regeneratePrompt.length}/200
                 </div>
               </div>
-              <motion.button
-                className="h-[52px] w-full rounded-[18px] bg-[#111] text-[16px] font-bold text-white shadow-[0_12px_24px_rgba(0,0,0,0.18)] transition-shadow hover:shadow-[0_14px_28px_rgba(0,0,0,0.22)] disabled:cursor-not-allowed disabled:bg-[#c8c1b8] disabled:shadow-none"
-                disabled={isGeneratingRecipes}
-                onClick={handleRegenerate}
-                type="button"
-                {...motionTapProps}
-              >
-                {isGeneratingRecipes ? "正在换一批" : "换一批菜谱"}
-              </motion.button>
+              <div className="pt-3 w-full">
+                <motion.button
+                  className="h-[52px] w-full rounded-[18px] bg-[#111] text-[16px] font-bold text-white shadow-[0_12px_24px_rgba(0,0,0,0.18)] transition-shadow hover:shadow-[0_14px_28px_rgba(0,0,0,0.22)] disabled:cursor-not-allowed disabled:bg-[#c8c1b8] disabled:shadow-none"
+                  disabled={isGeneratingRecipes}
+                  onClick={handleRegenerate}
+                  type="button"
+                  {...motionTapProps}
+                >
+                  {isGeneratingRecipes ? "正在换一批" : "换一批菜谱"}
+                </motion.button>
+              </div>
               <p className="text-center text-[12px] font-semibold text-[#aaa39a]">
                 不满意？换一批试试～
               </p>
