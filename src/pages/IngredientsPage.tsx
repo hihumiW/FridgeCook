@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { Camera, ImagePlus, LoaderCircle, ScanSearch, X } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 
 import { ingredients } from "@/data";
 import { AppTopBar } from "@/components/common/AppTopBar";
@@ -20,7 +21,13 @@ import {
   modalBackdropVariants,
   modalPanelVariants,
   motionTapProps,
+  smallMotionTapProps,
 } from "@/lib/motion";
+import {
+  isQwenVisionModel,
+  recognizeIngredientsFromImage,
+  type RecognizedIngredient,
+} from "@/lib/ingredientRecognition";
 import { useCookingStore } from "@/stores/useCookingStore";
 import type { IngredientCategory } from "@/types";
 
@@ -44,14 +51,23 @@ export function IngredientsPage() {
   const {
     selectedIngredients,
     customIngredients,
+    llmConfig,
     toggleIngredient,
     clearSelectedIngredients,
     addCustomIngredient,
+    addRecognizedIngredients,
     removeCustomIngredient,
   } = useCookingStore();
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const [isAddingCustom, setIsAddingCustom] = useState(false);
   const [isManagingCustom, setIsManagingCustom] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [isRecognitionMenuOpen, setIsRecognitionMenuOpen] = useState(false);
+  const [isRecognizing, setIsRecognizing] = useState(false);
+  const [recognitionError, setRecognitionError] = useState("");
+  const [recognizedIngredients, setRecognizedIngredients] = useState<RecognizedIngredient[]>([]);
+  const [selectedRecognizedNames, setSelectedRecognizedNames] = useState<string[]>([]);
   const [pendingDeleteItem, setPendingDeleteItem] = useState<{
     id: string;
     name: string;
@@ -68,6 +84,7 @@ export function IngredientsPage() {
   const selectedNames = selectedIngredients
     .filter((item) => item.name?.trim())
     .map((item) => item.name);
+  const canUseIngredientRecognition = isQwenVisionModel(llmConfig);
   const normalizedCustomName = normalizeForCompare(customName);
   const allIngredients = useMemo(
     () => [
@@ -121,9 +138,91 @@ export function IngredientsPage() {
     setIsResetConfirmOpen(false);
   }
 
+  function resetRecognitionState() {
+    setRecognitionError("");
+    setRecognizedIngredients([]);
+    setSelectedRecognizedNames([]);
+  }
+
+  function closeRecognitionMenu() {
+    setIsRecognitionMenuOpen(false);
+    setIsRecognizing(false);
+    resetRecognitionState();
+  }
+
+  function openFilePicker(source: "gallery" | "camera") {
+    if (isRecognizing) return;
+    resetRecognitionState();
+    setIsRecognitionMenuOpen(true);
+    if (source === "camera") {
+      cameraInputRef.current?.click();
+      return;
+    }
+    galleryInputRef.current?.click();
+  }
+
+  async function handleRecognitionFile(file?: File) {
+    if (!file) return;
+
+    setIsRecognitionMenuOpen(true);
+    setIsRecognizing(true);
+    setRecognitionError("");
+    setRecognizedIngredients([]);
+    setSelectedRecognizedNames([]);
+
+    try {
+      const result = await recognizeIngredientsFromImage(file, llmConfig);
+      const names = result.ingredients.map((item) => item.name);
+      setRecognizedIngredients(result.ingredients);
+      setSelectedRecognizedNames(names);
+    } catch (error) {
+      setRecognitionError(
+        error instanceof Error ? error.message : "图片识别失败，请稍后重试。",
+      );
+    } finally {
+      setIsRecognizing(false);
+    }
+  }
+
+  function handleRecognitionInputChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    void handleRecognitionFile(file);
+  }
+
+  function toggleRecognizedName(name: string) {
+    setSelectedRecognizedNames((current) =>
+      current.includes(name)
+        ? current.filter((item) => item !== name)
+        : [...current, name],
+    );
+  }
+
+  function handleConfirmRecognizedIngredients() {
+    if (selectedRecognizedNames.length === 0) return;
+    addRecognizedIngredients(selectedRecognizedNames);
+    closeRecognitionMenu();
+  }
+
   return (
     <DeviceFrame>
       <AppTopBar onReset={() => setIsResetConfirmOpen(true)} />
+
+      <input
+        accept="image/*"
+        className="hidden"
+        onChange={handleRecognitionInputChange}
+        ref={galleryInputRef}
+        type="file"
+      />
+      <input
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleRecognitionInputChange}
+        ref={cameraInputRef}
+        type="file"
+      />
 
       <header className="mt-6 px-1 text-left">
         <h1 className="text-[24px] font-black leading-8 tracking-normal text-[#151411]">今晚冰箱里有什么？</h1>
@@ -259,6 +358,161 @@ export function IngredientsPage() {
       </AnimatePresence>
 
       <AnimatePresence>
+        {canUseIngredientRecognition ? (
+          <motion.button
+            aria-label="识别食材"
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className={`fixed right-[max(18px,calc((100vw-430px)/2+18px))] z-20 flex h-14 w-14 items-center justify-center rounded-full bg-[#111] text-white shadow-[0_14px_34px_rgba(0,0,0,0.26)] transition-[bottom] ${
+              selectedNames.length > 0
+                ? "bottom-[calc(92px+env(safe-area-inset-bottom))]"
+                : "bottom-[calc(22px+env(safe-area-inset-bottom))]"
+            }`}
+            exit={{ opacity: 0, scale: 0.9, y: 8 }}
+            initial={{ opacity: 0, scale: 0.9, y: 8 }}
+            onClick={() => {
+              resetRecognitionState();
+              setIsRecognitionMenuOpen(true);
+            }}
+            type="button"
+            {...smallMotionTapProps}
+          >
+            <ScanSearch className="h-6 w-6" strokeWidth={2.4} />
+          </motion.button>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isRecognitionMenuOpen ? (
+          <motion.div
+            animate="animate"
+            className="fixed inset-0 z-30 flex items-end justify-center bg-black/20 px-4 pb-[calc(18px+env(safe-area-inset-bottom))] sm:items-center sm:pb-0"
+            exit="exit"
+            initial="initial"
+            variants={modalBackdropVariants}
+          >
+            <motion.section
+              className="w-full max-w-[398px] rounded-[22px] border border-[#eeeae4] bg-[#fbfaf8] p-4 shadow-[0_18px_48px_rgba(22,20,18,0.18)]"
+              variants={modalPanelVariants}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-[17px] font-black text-[#151411]">识别冰箱食材</h2>
+                  <p className="mt-1 text-[12px] font-semibold leading-5 text-[#9b958d]">
+                    拍一张或选一张清楚的食材照片，识别后先给你确认。
+                  </p>
+                </div>
+                <motion.button
+                  aria-label="关闭"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f1eee8] text-[#5f594f]"
+                  onClick={closeRecognitionMenu}
+                  type="button"
+                  {...smallMotionTapProps}
+                >
+                  <X className="h-4 w-4" strokeWidth={2.5} />
+                </motion.button>
+              </div>
+
+              <div className="mt-5 grid grid-cols-2 gap-2.5">
+                <motion.button
+                  className="flex h-[82px] flex-col items-center justify-center gap-2 rounded-[16px] border border-[#ece7df] bg-white text-[#4f4942] shadow-[0_7px_22px_rgba(27,24,20,0.055)] disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={isRecognizing}
+                  onClick={() => openFilePicker("gallery")}
+                  type="button"
+                  {...motionTapProps}
+                >
+                  <ImagePlus className="h-5 w-5" strokeWidth={2.4} />
+                  <span className="text-[13px] font-extrabold">从相册选择</span>
+                </motion.button>
+                <motion.button
+                  className="flex h-[82px] flex-col items-center justify-center gap-2 rounded-[16px] border border-[#ece7df] bg-white text-[#4f4942] shadow-[0_7px_22px_rgba(27,24,20,0.055)] disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={isRecognizing}
+                  onClick={() => openFilePicker("camera")}
+                  type="button"
+                  {...motionTapProps}
+                >
+                  <Camera className="h-5 w-5" strokeWidth={2.4} />
+                  <span className="text-[13px] font-extrabold">拍照识别</span>
+                </motion.button>
+              </div>
+
+              {isRecognizing ? (
+                <div className="mt-4 flex items-center gap-2 rounded-[16px] border border-[#e6dfd5] bg-[#f8f5ef] px-4 py-3 text-[12px] font-bold text-[#81796f]">
+                  <LoaderCircle className="h-4 w-4 animate-spin" strokeWidth={2.5} />
+                  正在识别食材……
+                </div>
+              ) : null}
+
+              {recognitionError ? (
+                <div className="mt-4 rounded-[16px] border border-[#f1d1cc] bg-[#fff3f1] px-4 py-3 text-[12px] font-bold leading-5 text-[#bf4b3e]">
+                  {recognitionError}
+                </div>
+              ) : null}
+
+              {recognizedIngredients.length > 0 ? (
+                <div className="mt-5 space-y-3">
+                  <div className="flex items-center justify-between px-1">
+                    <h3 className="text-[14px] font-extrabold text-[#1b1a17]">
+                      识别到的食材
+                    </h3>
+                    <span className="text-[12px] font-bold text-[#9b958d]">
+                      已选 {selectedRecognizedNames.length}
+                    </span>
+                  </div>
+                  <div className="max-h-[190px] space-y-2 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {recognizedIngredients.map((item) => {
+                      const selected = selectedRecognizedNames.includes(item.name);
+                      return (
+                        <motion.button
+                          className={`flex w-full items-center justify-between gap-3 rounded-[15px] border px-3.5 py-3 text-left transition-colors ${
+                            selected
+                              ? "border-[#d7e8ce] bg-[#fbfff8]"
+                              : "border-[#ece7df] bg-white"
+                          }`}
+                          key={item.name}
+                          onClick={() => toggleRecognizedName(item.name)}
+                          type="button"
+                          {...motionTapProps}
+                        >
+                          <span className="min-w-0">
+                            <span className="block text-[13px] font-extrabold text-[#35312c]">
+                              {item.name}
+                            </span>
+                            {item.note ? (
+                              <span className="mt-0.5 block truncate text-[11px] font-semibold text-[#9b958d]">
+                                {item.note}
+                              </span>
+                            ) : null}
+                          </span>
+                          <span
+                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                              selected
+                                ? "border-[#111] bg-[#111]"
+                                : "border-[#d8d1c8] bg-white"
+                            }`}
+                          >
+                            {selected ? (
+                              <span className="h-2 w-2 rounded-full bg-white" />
+                            ) : null}
+                          </span>
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                  <motion.button
+                    className="h-11 w-full rounded-[14px] bg-[#111] text-[14px] font-bold text-white disabled:cursor-not-allowed disabled:bg-[#c8c1b8]"
+                    disabled={selectedRecognizedNames.length === 0}
+                    onClick={handleConfirmRecognizedIngredients}
+                    type="button"
+                    {...motionTapProps}
+                  >
+                    加入本次食材
+                  </motion.button>
+                </div>
+              ) : null}
+            </motion.section>
+          </motion.div>
+        ) : null}
+
         {isResetConfirmOpen ? (
           <motion.div
             animate="animate"

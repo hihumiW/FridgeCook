@@ -18,7 +18,7 @@ export function SelectedIngredientsBar({ names }: SelectedIngredientsBarProps) {
           已选 {names.length} 种 :
         </p>
         {names.length > 0 ? (
-          <p className="whitespace-normal break-words text-[12px] font-semibold leading-7 text-white/92">
+          <p className="whitespace-normal break-words text-[12px] font-semibold leading-5 text-white/92">
             {names.join("、")}
           </p>
         ) : null}

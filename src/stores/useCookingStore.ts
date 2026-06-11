@@ -45,6 +45,8 @@ type CookingStore = {
   rememberSelectedIngredients: () => void;
   /** 新增一个自定义食材，并默认加入本次已选食材。 */
   addCustomIngredient: (name: string) => void;
+  /** 批量加入图片识别出的食材；未知食材会保存为自定义食材。 */
+  addRecognizedIngredients: (names: string[]) => void;
   /** 删除一个自定义食材，同时从本次已选食材里移除。 */
   removeCustomIngredient: (id: string) => void;
   /** 选中或取消选中一个调料，并自动更新调料库时间。 */
@@ -166,6 +168,26 @@ function ingredientMatchesName(ingredient: Ingredient | RecentIngredient, name: 
   );
 }
 
+function findIngredientByName(
+  candidates: (Ingredient | RecentIngredient)[],
+  name: string,
+) {
+  return candidates.find((ingredient) => ingredientMatchesName(ingredient, name));
+}
+
+function toIngredient(ingredient: Ingredient | RecentIngredient): Ingredient {
+  return {
+    id: ingredient.id,
+    name: ingredient.name,
+    category: ingredient.category,
+    emoji: ingredient.emoji,
+    image: ingredient.image,
+    aliases: ingredient.aliases,
+    isCommon: ingredient.isCommon,
+    isCustom: ingredient.isCustom,
+  };
+}
+
 function sanitizeSeasoningLibrary(library: SeasoningLibrary): SeasoningLibrary {
   return {
     selectedSeasonings: uniqueValidByIdAndName(
@@ -192,6 +214,20 @@ function sanitizeLlmConfig(
 function clampTemperature(value?: number) {
   if (typeof value !== "number" || !Number.isFinite(value)) return 0.3;
   return Math.max(0.1, Math.min(0.8, Number(value.toFixed(1))));
+}
+
+function uniqueTrimmedNames(names: readonly string[]) {
+  const seenNames = new Set<string>();
+  const result: string[] = [];
+
+  for (const name of names) {
+    const normalizedName = normalizeForCompare(name);
+    if (!normalizedName || seenNames.has(normalizedName)) continue;
+    seenNames.add(normalizedName);
+    result.push(name.trim());
+  }
+
+  return result;
 }
 
 export const useCookingStore = create<CookingStore>()(
@@ -264,6 +300,47 @@ export const useCookingStore = create<CookingStore>()(
               ...state.selectedIngredients,
               customIngredient,
             ]),
+          };
+        }),
+
+      addRecognizedIngredients: (names) =>
+        set((state) => {
+          const normalizedNames = uniqueTrimmedNames(
+            names.map(normalizeCustomIngredientName),
+          );
+          if (normalizedNames.length === 0) return state;
+
+          const reusableIngredients = [
+            ...ingredients,
+            ...state.customIngredients,
+            ...state.recentIngredients,
+            ...state.selectedIngredients,
+          ];
+          const customIngredients = [...state.customIngredients];
+          const selectedIngredients = [...state.selectedIngredients];
+
+          for (const name of normalizedNames) {
+            const existing = findIngredientByName(reusableIngredients, name);
+            const ingredient: Ingredient = existing
+              ? toIngredient(existing)
+              : {
+                  id: `custom_ingredient_${encodeURIComponent(name)}`,
+                  name,
+                  category: "other",
+                  isCustom: true,
+                };
+
+            if (!existing) {
+              reusableIngredients.push(ingredient);
+              customIngredients.push(ingredient);
+            }
+
+            selectedIngredients.push(ingredient);
+          }
+
+          return {
+            customIngredients: uniqueValidByIdAndName(customIngredients),
+            selectedIngredients: uniqueValidByIdAndName(selectedIngredients),
           };
         }),
 
