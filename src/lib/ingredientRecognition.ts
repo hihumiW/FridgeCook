@@ -42,11 +42,11 @@ export function isQwenVisionModel(config: LlmConfig) {
     return false;
 
   const isQwen = model.includes("qwen") || model.includes("qvq");
-  const isVision =
-    model.includes("vl") ||
-    model.includes("vision") ||
-    model.includes("omni") ||
-    model.includes("qvq");
+  // const isVision =
+  //   model.includes("vl") ||
+  //   model.includes("vision") ||
+  //   model.includes("omni") ||
+  //   model.includes("qvq");
 
   return isQwen;
 }
