@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Camera, ImagePlus, LoaderCircle, ScanSearch, X } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ingredients } from "@/data";
 import { AppTopBar } from "@/components/common/AppTopBar";
@@ -76,6 +76,22 @@ export function IngredientsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<IngredientCategoryFilter>("vegetable");
   const [footerHeight, setFooterHeight] = useState(0);
+
+  useEffect(() => {
+    const isAnyModalOpen =
+      isRecognitionMenuOpen ||
+      isResetConfirmOpen ||
+      pendingDeleteItem !== null ||
+      isAddingCustom;
+
+    if (isAnyModalOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isRecognitionMenuOpen, isResetConfirmOpen, pendingDeleteItem, isAddingCustom]);
   const debouncedSearchQuery = useDebouncedValue(searchQuery, 220);
   const activeCategoryLabel =
     categoryFilters.find((category) => category.value === activeCategory)?.label ?? "蔬菜";
@@ -391,6 +407,7 @@ export function IngredientsPage() {
             exit="exit"
             initial="initial"
             variants={modalBackdropVariants}
+            onTouchMove={(e) => e.stopPropagation()}
           >
             <motion.section
               className="w-full max-w-[398px] rounded-[22px] border border-[#eeeae4] bg-[#fbfaf8] p-4 shadow-[0_18px_48px_rgba(22,20,18,0.18)]"
@@ -522,6 +539,7 @@ export function IngredientsPage() {
             exit="exit"
             initial="initial"
             variants={modalBackdropVariants}
+            onTouchMove={(e) => e.stopPropagation()}
           >
             <motion.section
               className="w-full max-w-[398px] rounded-[22px] border border-[#eeeae4] bg-[#fbfaf8] p-4 shadow-[0_18px_48px_rgba(22,20,18,0.18)]"
@@ -563,6 +581,7 @@ export function IngredientsPage() {
             exit="exit"
             initial="initial"
             variants={modalBackdropVariants}
+            onTouchMove={(e) => e.stopPropagation()}
           >
             <motion.section
               className="w-full max-w-[398px] rounded-[22px] border border-[#eeeae4] bg-[#fbfaf8] p-4 shadow-[0_18px_48px_rgba(22,20,18,0.18)]"
@@ -602,6 +621,7 @@ export function IngredientsPage() {
           exit="exit"
           initial="initial"
           variants={modalBackdropVariants}
+          onTouchMove={(e) => e.stopPropagation()}
         >
           <motion.section
             className="w-full max-w-[398px] rounded-[22px] border border-[#eeeae4] bg-[#fbfaf8] p-4 shadow-[0_18px_48px_rgba(22,20,18,0.18)]"
