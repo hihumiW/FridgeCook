@@ -1,12 +1,36 @@
 import { motion } from "framer-motion";
+import { useEffect, useRef } from "react";
 
 type SelectedIngredientsBarProps = {
   names: string[];
+  onHeightChange?: (height: number) => void;
 };
 
-export function SelectedIngredientsBar({ names }: SelectedIngredientsBarProps) {
+export function SelectedIngredientsBar({ names, onHeightChange }: SelectedIngredientsBarProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element || !onHeightChange) return;
+
+    const observer = new ResizeObserver(() => {
+      onHeightChange(element.offsetHeight);
+    });
+
+    observer.observe(element);
+
+    // Initial measurement
+    onHeightChange(element.offsetHeight);
+
+    return () => {
+      observer.disconnect();
+      onHeightChange(0);
+    };
+  }, [onHeightChange]);
+
   return (
     <motion.div
+      ref={containerRef}
       animate={{ opacity: 1, y: 0 }}
       className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[430px] px-4 pb-[calc(14px+env(safe-area-inset-bottom))]"
       exit={{ opacity: 0, y: 18 }}

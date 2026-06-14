@@ -75,6 +75,7 @@ export function IngredientsPage() {
   const [customName, setCustomName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<IngredientCategoryFilter>("vegetable");
+  const [footerHeight, setFooterHeight] = useState(0);
   const debouncedSearchQuery = useDebouncedValue(searchQuery, 220);
   const activeCategoryLabel =
     categoryFilters.find((category) => category.value === activeCategory)?.label ?? "蔬菜";
@@ -353,7 +354,7 @@ export function IngredientsPage() {
 
       <AnimatePresence>
         {selectedNames.length > 0 ? (
-          <SelectedIngredientsBar names={selectedNames} />
+          <SelectedIngredientsBar names={selectedNames} onHeightChange={setFooterHeight} />
         ) : null}
       </AnimatePresence>
 
@@ -362,11 +363,12 @@ export function IngredientsPage() {
           <motion.button
             aria-label="识别食材"
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className={`fixed right-[max(18px,calc((100vw-430px)/2+18px))] z-20 flex h-14 w-14 items-center justify-center rounded-full bg-[#111] text-white shadow-[0_14px_34px_rgba(0,0,0,0.26)] transition-[bottom] ${
-              selectedNames.length > 0
-                ? "bottom-[calc(92px+env(safe-area-inset-bottom))]"
-                : "bottom-[calc(22px+env(safe-area-inset-bottom))]"
-            }`}
+            className="fixed right-[max(18px,calc((100vw-430px)/2+18px))] z-20 flex h-14 w-14 items-center justify-center rounded-full bg-[#111] text-white shadow-[0_14px_34px_rgba(0,0,0,0.26)] transition-[bottom] bottom-[calc(22px+env(safe-area-inset-bottom))]"
+            style={{
+              bottom: (selectedNames.length > 0 && footerHeight > 0)
+                ? `${footerHeight + 12}px`
+                : undefined
+            }}
             exit={{ opacity: 0, scale: 0.9, y: 8 }}
             initial={{ opacity: 0, scale: 0.9, y: 8 }}
             onClick={() => {
